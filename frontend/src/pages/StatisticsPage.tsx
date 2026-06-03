@@ -13,6 +13,8 @@ const statCards = [
   { key: 'totalDurationMinutes', icon: '⏰', label: '总学习时长（分钟）', variant: 'purple' },
 ];
 
+const colors = ['#ff6b81', '#a29bfe', '#2ed573', '#ffa502', '#ff4757', '#c8c4ff'];
+
 const StatisticsPage: React.FC = () => {
   const [stats, setStats] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +42,10 @@ const StatisticsPage: React.FC = () => {
     return `${h}小时${m}分钟`;
   };
 
-  // 打卡日历热力图数据
+  // 打卡日历热力图
   const heatmapOption = {
     tooltip: { trigger: 'item', formatter: '{b0}: {c} 分钟' },
+    grid: { left: 0, right: 0, top: 0, bottom: 0 },
     calendar: {
       range: '2026',
       cellSize: ['auto', 16],
@@ -71,31 +74,6 @@ const StatisticsPage: React.FC = () => {
         color: ['#fff0f6', '#ffb8c6', '#ff6b81', '#e8435b'],
       },
     },
-  };
-
-  // 各目标时长饼图
-  const pieOption = {
-    tooltip: { trigger: 'item', formatter: '{b}: {c} 分钟 ({d}%)' },
-    series: [
-      {
-        type: 'pie',
-        radius: ['40%', '70%'],
-        center: ['50%', '50%'],
-        avoidLabelOverlap: true,
-        itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
-        label: { show: true, formatter: '{b}\n{d}%', fontSize: 12, color: '#8c6f7a' },
-        data: stats.goalStats
-          .filter((g) => g.totalDurationMinutes > 0)
-          .map((g, i) => {
-            const colors = ['#ff6b81', '#a29bfe', '#2ed573', '#ffa502', '#ff4757', '#c8c4ff'];
-            return {
-              name: g.goalName,
-              value: g.totalDurationMinutes,
-              itemStyle: { color: g.color || colors[i % colors.length] },
-            };
-          }),
-      },
-    ],
   };
 
   // 学习时长趋势
@@ -167,54 +145,50 @@ const StatisticsPage: React.FC = () => {
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col span={14}>
-          <Card className="cute-card" title={<span style={{ color: '#5a3d4a' }}>📈 每日学习时长趋势</span>}>
+          <Card className="cute-card" style={{ height: '100%' }}
+            title={<span style={{ color: '#5a3d4a' }}>📈 每日学习时长趋势</span>}>
             <ReactEChartsCore option={lineOption} style={{ height: 300 }} />
           </Card>
         </Col>
         <Col span={10}>
-          <Card className="cute-card" title={<span style={{ color: '#5a3d4a' }}>🎯 各目标学习时长</span>}>
-            {stats.goalStats.filter((g) => g.totalDurationMinutes > 0).length > 0 ? (
-              <ReactEChartsCore option={pieOption} style={{ height: 300 }} />
+          <Card className="cute-card" style={{ height: '100%' }}
+            title={<span style={{ color: '#5a3d4a' }}>🎯 目标任务完成情况</span>}>
+            {stats.goalStats.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 300, overflow: 'auto', paddingRight: 4 }}>
+                {stats.goalStats.map((goal, i) => {
+                  const c = goal.color || colors[i % colors.length];
+                  return (
+                    <div key={goal.goalId} style={{
+                      borderLeft: `3px solid ${c}`,
+                      paddingLeft: 12,
+                      background: '#fff5f7',
+                      borderRadius: 10,
+                      padding: '10px 12px',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <Text strong style={{ color: '#5a3d4a', fontSize: 14 }}>{goal.goalName}</Text>
+                        <Text style={{ color: '#b8929e', fontSize: 12 }}>
+                          ⏱️ {formatDuration(goal.totalDurationMinutes)}
+                        </Text>
+                      </div>
+                      <Progress
+                        percent={goal.totalTasks > 0 ? Math.round((goal.completedTasks / goal.totalTasks) * 100) : 0}
+                        size="small"
+                        strokeColor={{ '0%': c, '100%': colors[(i + 1) % colors.length] }}
+                        format={() => `${goal.completedTasks}/${goal.totalTasks}`}
+                      />
+                      <div style={{ textAlign: 'right', marginTop: 2 }}>
+                        <Text style={{ color: '#8c6f7a', fontSize: 11 }}>
+                          已完成 {goal.completedTasks} 个，共 {goal.totalTasks} 个任务
+                        </Text>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <Empty description="暂无数据" />
             )}
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col span={24}>
-          <Card className="cute-card" title={<span style={{ color: '#5a3d4a' }}>📋 各目标任务完成情况</span>}>
-            <Row gutter={[16, 16]}>
-              {stats.goalStats.map((goal, i) => {
-                const colors = ['#ff6b81', '#a29bfe', '#2ed573', '#ffa502', '#ff4757', '#c8c4ff'];
-                return (
-                  <Col span={8} key={goal.goalId}>
-                    <Card size="small" className="cute-card" style={{
-                      borderTop: `3px solid ${goal.color || colors[i % colors.length]}`,
-                    }}>
-                      <Text strong style={{ color: '#5a3d4a' }}>{goal.goalName}</Text>
-                      <div style={{ marginTop: 8 }}>
-                        <Text style={{ color: '#8c6f7a', fontSize: 12 }}>
-                          ⏱️ 总时长：{formatDuration(goal.totalDurationMinutes)}
-                        </Text>
-                      </div>
-                      <div style={{ marginTop: 4 }}>
-                        <Progress
-                          percent={goal.totalTasks > 0 ? Math.round((goal.completedTasks / goal.totalTasks) * 100) : 0}
-                          size="small"
-                          strokeColor={{
-                            '0%': goal.color || colors[i % colors.length],
-                            '100%': colors[(i + 1) % colors.length],
-                          }}
-                          format={() => `✅ ${goal.completedTasks}/${goal.totalTasks}`}
-                        />
-                      </div>
-                    </Card>
-                  </Col>
-                );
-              })}
-            </Row>
           </Card>
         </Col>
       </Row>

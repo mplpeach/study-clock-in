@@ -90,7 +90,10 @@ const CalendarPage: React.FC = () => {
             icon={<LeftOutlined />}
             type="text"
             className="cute-btn"
-            onClick={() => onChange(value.subtract(1, 'month'))}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange(value.subtract(1, 'month'));
+            }}
           />
         </Col>
         <Col>
@@ -103,7 +106,10 @@ const CalendarPage: React.FC = () => {
             icon={<RightOutlined />}
             type="text"
             className="cute-btn"
-            onClick={() => onChange(value.add(1, 'month'))}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange(value.add(1, 'month'));
+            }}
           />
         </Col>
       </Row>
@@ -121,7 +127,7 @@ const CalendarPage: React.FC = () => {
         <div className="cute-calendar">
           <Calendar
             value={currentMonth}
-            onChange={(date) => setCurrentMonth(date)}
+            onPanelChange={(date) => setCurrentMonth(date)}
             cellRender={(date) => dateCellRender(date as Dayjs)}
             onSelect={(date) => handleDateSelect(date as Dayjs)}
             headerRender={headerRender}

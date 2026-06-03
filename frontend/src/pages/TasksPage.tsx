@@ -144,7 +144,6 @@ const TasksPage: React.FC = () => {
         </div>
         <Space>
           <Input.Search
-            className="cute-input"
             placeholder="搜索任务"
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}

@@ -88,7 +88,6 @@ body {
 
 /* ============ 页面通用 ============ */
 .page-header {
-  animation: fadeInUp 0.5s ease-out;
   margin-bottom: 24px;
 }
 
