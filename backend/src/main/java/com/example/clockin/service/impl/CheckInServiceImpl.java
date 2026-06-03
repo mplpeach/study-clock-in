@@ -1,0 +1,179 @@
+package com.example.clockin.service.impl;
+
+import com.example.clockin.dto.CheckInDTO;
+import com.example.clockin.entity.*;
+import com.example.clockin.enums.CheckInType;
+import com.example.clockin.enums.TaskInstanceStatus;
+import com.example.clockin.repository.*;
+import com.example.clockin.service.CheckInService;
+import com.example.clockin.service.FileStorageService;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class CheckInServiceImpl implements CheckInService {
+
+    private final CheckInRecordRepository recordRepository;
+    private final CheckInImageRepository imageRepository;
+    private final TaskInstanceRepository instanceRepository;
+    private final TaskRepository taskRepository;
+    private final GoalTaskRepository goalTaskRepository;
+    private final GoalRepository goalRepository;
+    private final FileStorageService fileStorageService;
+
+    public CheckInServiceImpl(CheckInRecordRepository recordRepository,
+                              CheckInImageRepository imageRepository,
+                              TaskInstanceRepository instanceRepository,
+                              TaskRepository taskRepository,
+                              GoalTaskRepository goalTaskRepository,
+                              GoalRepository goalRepository,
+                              FileStorageService fileStorageService) {
+        this.recordRepository = recordRepository;
+        this.imageRepository = imageRepository;
+        this.instanceRepository = instanceRepository;
+        this.taskRepository = taskRepository;
+        this.goalTaskRepository = goalTaskRepository;
+        this.goalRepository = goalRepository;
+        this.fileStorageService = fileStorageService;
+    }
+
+    @Override
+    @Transactional
+    public CheckInDTO startCheckIn(Long userId, CheckInDTO.StartRequest request) {
+        TaskInstance instance = instanceRepository.findById(request.getTaskInstanceId())
+                .orElseThrow(() -> new EntityNotFoundException("任务实例不存在"));
+
+        instance.setStatus(TaskInstanceStatus.IN_PROGRESS);
+        instanceRepository.save(instance);
+
+        CheckInRecord record = new CheckInRecord();
+        record.setTaskInstanceId(instance.getId());
+        record.setUserId(userId);
+        record.setStartTime(LocalDateTime.now());
+        record.setCheckInType(CheckInType.REALTIME);
+        record = recordRepository.save(record);
+
+        return toDTO(record);
+    }
+
+    @Override
+    @Transactional
+    public CheckInDTO endCheckIn(Long userId, CheckInDTO.EndRequest request, List<MultipartFile> images) {
+        CheckInRecord record = recordRepository.findById(request.getRecordId())
+                .orElseThrow(() -> new EntityNotFoundException("打卡记录不存在"));
+
+        record.setEndTime(LocalDateTime.now());
+        if (record.getStartTime() != null) {
+            long minutes = Duration.between(record.getStartTime(), record.getEndTime()).toMinutes();
+            record.setDurationMinutes((int) minutes);
+        }
+        if (request.getContent() != null) record.setContent(request.getContent());
+        if (request.getNote() != null) record.setNote(request.getNote());
+        record = recordRepository.save(record);
+
+        TaskInstance instance = instanceRepository.findById(record.getTaskInstanceId())
+                .orElseThrow(() -> new EntityNotFoundException("任务实例不存在"));
+        instance.setStatus(TaskInstanceStatus.COMPLETED);
+        instanceRepository.save(instance);
+
+        if (images != null && !images.isEmpty()) {
+            saveImages(record.getId(), images);
+        }
+
+        return toDTO(record);
+    }
+
+    @Override
+    @Transactional
+    public CheckInDTO manualCheckIn(Long userId, CheckInDTO.ManualRequest request, List<MultipartFile> images) {
+        TaskInstance instance = instanceRepository.findById(request.getTaskInstanceId())
+                .orElseThrow(() -> new EntityNotFoundException("任务实例不存在"));
+
+        instance.setStatus(TaskInstanceStatus.COMPLETED);
+        instanceRepository.save(instance);
+
+        CheckInRecord record = new CheckInRecord();
+        record.setTaskInstanceId(instance.getId());
+        record.setUserId(userId);
+        record.setStartTime(request.getStartTime());
+        record.setEndTime(request.getEndTime());
+        record.setDurationMinutes(request.getDurationMinutes());
+        record.setContent(request.getContent());
+        record.setNote(request.getNote());
+        record.setCheckInType(CheckInType.MANUAL);
+        record = recordRepository.save(record);
+
+        if (images != null && !images.isEmpty()) {
+            saveImages(record.getId(), images);
+        }
+
+        return toDTO(record);
+    }
+
+    @Override
+    public CheckInDTO getCheckInRecord(Long recordId) {
+        CheckInRecord record = recordRepository.findById(recordId)
+                .orElseThrow(() -> new EntityNotFoundException("打卡记录不存在"));
+        return toDTO(record);
+    }
+
+    @Override
+    public List<CheckInDTO> getRecordsByTaskInstance(Long taskInstanceId) {
+        return recordRepository.findByTaskInstanceId(taskInstanceId).stream()
+                .map(this::toDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CheckInDTO> getUserRecords(Long userId) {
+        return recordRepository.findByUserIdOrderByStartTimeDesc(userId).stream()
+                .map(this::toDTO).collect(Collectors.toList());
+    }
+
+    private void saveImages(Long recordId, List<MultipartFile> images) {
+        for (MultipartFile file : images) {
+            String filePath = fileStorageService.upload(file);
+            CheckInImage image = new CheckInImage();
+            image.setRecordId(recordId);
+            image.setFilePath(filePath);
+            image.setFileName(file.getOriginalFilename());
+            image.setFileSize(file.getSize());
+            imageRepository.save(image);
+        }
+    }
+
+    private CheckInDTO toDTO(CheckInRecord record) {
+        CheckInDTO dto = new CheckInDTO();
+        dto.setId(record.getId());
+        dto.setTaskInstanceId(record.getTaskInstanceId());
+        dto.setStartTime(record.getStartTime());
+        dto.setEndTime(record.getEndTime());
+        dto.setDurationMinutes(record.getDurationMinutes());
+        dto.setContent(record.getContent());
+        dto.setNote(record.getNote());
+        dto.setCheckInType(record.getCheckInType());
+
+        TaskInstance instance = instanceRepository.findById(record.getTaskInstanceId()).orElse(null);
+        if (instance != null) {
+            dto.setTaskId(instance.getTaskId());
+            Task task = taskRepository.findById(instance.getTaskId()).orElse(null);
+            if (task != null) {
+                dto.setTaskName(task.getName());
+            }
+        }
+
+        List<String> imageUrls = imageRepository.findByRecordId(record.getId()).stream()
+                .map(CheckInImage::getFilePath)
+                .collect(Collectors.toList());
+        dto.setImageUrls(imageUrls);
+
+        return dto;
+    }
+}

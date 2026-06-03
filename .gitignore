@@ -1,0 +1,26 @@
+# Java
+backend/target/
+*.class
+*.jar
+*.war
+*.log
+*.iml
+.idea/
+*.DS_Store
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Environment
+.env
+.env.local
+
+# Uploads
+uploads/
+
+# IDE
+.vscode/
+*.swp
+*.swo
