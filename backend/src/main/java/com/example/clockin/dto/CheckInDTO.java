@@ -34,6 +34,8 @@ public class CheckInDTO {
         private Long recordId;
         private String content;
         private String note;
+        private boolean complete = true;
+        private Integer durationSeconds;
     }
 
     @Data

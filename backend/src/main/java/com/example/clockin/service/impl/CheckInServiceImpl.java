@@ -70,10 +70,15 @@ public class CheckInServiceImpl implements CheckInService {
         CheckInRecord record = recordRepository.findById(request.getRecordId())
                 .orElseThrow(() -> new EntityNotFoundException("打卡记录不存在"));
 
-        record.setEndTime(LocalDateTime.now());
-        if (record.getStartTime() != null) {
-            long minutes = Duration.between(record.getStartTime(), record.getEndTime()).toMinutes();
-            record.setDurationMinutes((int) minutes);
+        if (request.getDurationSeconds() != null && record.getStartTime() != null) {
+            record.setEndTime(record.getStartTime().plusSeconds(request.getDurationSeconds()));
+            record.setDurationMinutes((int) Math.ceil(request.getDurationSeconds() / 60.0));
+        } else {
+            record.setEndTime(LocalDateTime.now());
+            if (record.getStartTime() != null) {
+                long minutes = Duration.between(record.getStartTime(), record.getEndTime()).toMinutes();
+                record.setDurationMinutes((int) minutes);
+            }
         }
         if (request.getContent() != null) record.setContent(request.getContent());
         if (request.getNote() != null) record.setNote(request.getNote());
@@ -81,8 +86,10 @@ public class CheckInServiceImpl implements CheckInService {
 
         TaskInstance instance = instanceRepository.findById(record.getTaskInstanceId())
                 .orElseThrow(() -> new EntityNotFoundException("任务实例不存在"));
-        instance.setStatus(TaskInstanceStatus.COMPLETED);
-        instanceRepository.save(instance);
+        if (request.isComplete()) {
+            instance.setStatus(TaskInstanceStatus.COMPLETED);
+            instanceRepository.save(instance);
+        }
 
         if (images != null && !images.isEmpty()) {
             saveImages(record.getId(), images);

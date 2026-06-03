@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Card, Button, Modal, Form, Input, Select, TimePicker, message, Row, Col,
-  Tag, Empty, Upload, List, Space, Typography,
+  Tag, Empty, Upload, List, Space, Typography, Radio,
 } from 'antd';
 import {
-  PlayCircleOutlined, PauseCircleOutlined, PlusOutlined,
+  PlayCircleOutlined, PauseCircleOutlined,
   HistoryOutlined, InboxOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { instanceApi, checkInApi, taskApi, goalApi } from '../api';
-import type { TaskInstance, Goal } from '../api';
+import type { TaskInstance, Task, Goal } from '../api';
 
 const { TextArea } = Input;
 const { Dragger } = Upload;
@@ -25,30 +25,45 @@ const CheckInPage: React.FC = () => {
   const [todayInstances, setTodayInstances] = useState<TaskInstance[]>([]);
   const [overdueInstances, setOverdueInstances] = useState<TaskInstance[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const [activeInstanceId, setActiveInstanceId] = useState<number | null>(null);
   const [activeRecordId, setActiveRecordId] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [accumulatedElapsed, setAccumulatedElapsed] = useState(0);
+  const timerRef = useRef(0);
+
+  const [startModalOpen, setStartModalOpen] = useState(false);
+  const [startTaskType, setStartTaskType] = useState<'existing' | 'new'>('existing');
+  const [startForm] = Form.useForm();
+
+  const [pauseModalOpen, setPauseModalOpen] = useState(false);
+  const [pauseForm] = Form.useForm();
+
   const [endModalOpen, setEndModalOpen] = useState(false);
   const [endRecordId, setEndRecordId] = useState<number | null>(null);
   const [endForm] = Form.useForm();
   const [endFiles, setEndFiles] = useState<File[]>([]);
+
+  const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [manualTaskType, setManualTaskType] = useState<'existing' | 'new'>('existing');
   const [manualForm] = Form.useForm();
   const [manualFiles, setManualFiles] = useState<File[]>([]);
-  const [newTaskModalOpen, setNewTaskModalOpen] = useState(false);
-  const [newTaskForm] = Form.useForm();
 
   const today = dayjs().format('YYYY-MM-DD');
 
   const fetchData = async () => {
     try {
-      const [instances, overdue, allGoals] = await Promise.all([
+      const [instances, overdue, allGoals, allTasks] = await Promise.all([
         instanceApi.getByDate(today),
         instanceApi.getOverdue(),
         goalApi.getAll(),
+        taskApi.getAll(),
       ]);
       setTodayInstances(instances);
       setOverdueInstances(overdue);
       setGoals(allGoals);
+      setTasks(allTasks);
     } catch (e) {
       console.error(e);
     }
@@ -56,15 +71,31 @@ const CheckInPage: React.FC = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  useEffect(() => {
-    let timer: number;
-    if (activeRecordId !== null) {
-      timer = window.setInterval(() => {
-        setElapsed((prev) => prev + 1);
-      }, 1000);
+  const timerDisplay = accumulatedElapsed + elapsed;
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = 0;
     }
-    return () => clearInterval(timer);
-  }, [activeRecordId]);
+  }, []);
+
+  const startTimer = useCallback(() => {
+    stopTimer();
+    timerRef.current = window.setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+  }, [stopTimer]);
+
+  useEffect(() => () => stopTimer(), [stopTimer]);
+
+  const clearActive = useCallback(() => {
+    setActiveInstanceId(null);
+    setActiveRecordId(null);
+    setElapsed(0);
+    setAccumulatedElapsed(0);
+    stopTimer();
+  }, [stopTimer]);
 
   const formatElapsed = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -73,76 +104,242 @@ const CheckInPage: React.FC = () => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleStart = async (instanceId: number) => {
-    try {
-      const record = await checkInApi.start(instanceId);
-      setActiveRecordId(record.id);
-      setElapsed(0);
-      message.success('开始学习！加油~ 💪');
-      fetchData();
-    } catch (e: any) {
-      message.error(e.message);
+  const resolveInstance = async (taskId: number) => {
+    let instance = todayInstances.find((i) => i.taskId === taskId);
+    if (!instance) {
+      instance = await instanceApi.create(taskId, today);
     }
+    return instance;
   };
 
-  const handleEndOpen = (recordId: number) => {
-    setEndRecordId(recordId);
+  const availableTasks = tasks.filter((t) => {
+    const inst = todayInstances.find((i) => i.taskId === t.id);
+    return !inst || inst.status !== 'COMPLETED';
+  });
+
+  // ===== 开始学习 =====
+  const handleStartSubmit = async () => {
+    const values = await startForm.validateFields();
+    let taskId: number;
+
+    if (startTaskType === 'existing') {
+      taskId = values.taskId;
+    } else {
+      const task = await taskApi.create({ name: values.name, description: values.description });
+      if (values.goalId) {
+        await taskApi.bindToGoal(task.id, values.goalId);
+      }
+      taskId = task.id;
+    }
+
+    const instance = await resolveInstance(taskId);
+    const record = await checkInApi.start(instance.id);
+    setActiveInstanceId(instance.id);
+    setActiveRecordId(record.id);
+    setElapsed(0);
+    setAccumulatedElapsed(0);
+    startTimer();
+    message.success('开始学习！加油~ 💪');
+    setStartModalOpen(false);
+    startForm.resetFields();
+    fetchData();
+  };
+
+  const openStartModal = () => {
+    setStartTaskType('existing');
+    startForm.resetFields();
+    setStartModalOpen(true);
+  };
+
+  // ===== 继续学习（从已暂停/进行中的实例恢复） =====
+  const handleResume = async (instanceId: number) => {
+    try {
+      const records = await checkInApi.getByInstance(instanceId);
+      const totalSeconds = records.reduce((sum, r) => {
+        // 优先用精确的 startTime/endTime 差值，避免 durationMinutes 截断丢精度
+        if (r.startTime && r.endTime) {
+          return sum + dayjs(r.endTime).diff(dayjs(r.startTime), 'second');
+        }
+        if (r.durationMinutes) return sum + r.durationMinutes * 60;
+        return sum;
+      }, 0);
+
+      const record = await checkInApi.start(instanceId);
+      setActiveInstanceId(instanceId);
+      setActiveRecordId(record.id);
+      setElapsed(0);
+      setAccumulatedElapsed(totalSeconds);
+      startTimer();
+      message.success('继续学习！加油~ 💪');
+      fetchData();
+    } catch (e: any) { message.error(e.message); }
+  };
+
+  const doStartInstance = async (instanceId: number) => {
+    try {
+      const record = await checkInApi.start(instanceId);
+      setActiveInstanceId(instanceId);
+      setActiveRecordId(record.id);
+      setElapsed(0);
+      setAccumulatedElapsed(0);
+      startTimer();
+      message.success('开始学习！加油~ 💪');
+      fetchData();
+    } catch (e: any) { message.error(e.message); }
+  };
+
+  // ===== 暂停（提交内容 + 时长，但不完成实例） =====
+  const handlePause = async () => {
+    stopTimer();
+    pauseForm.resetFields();
+    // 拉取之前的记录，回显上一次的学习内容
+    try {
+      const records = await checkInApi.getByInstance(activeInstanceId!);
+      const prev = records.filter((r) => r.id !== activeRecordId);
+      // 取最新一条有内容的记录（用户可能在多次暂停中追加修改）
+      const lastContent = [...prev].reverse().find((r) => r.content)?.content;
+      if (lastContent) {
+        pauseForm.setFieldsValue({ content: lastContent });
+      }
+    } catch (e) { /* 非关键，静默失败 */ }
+    setPauseModalOpen(true);
+  };
+
+  const handlePauseSubmit = async () => {
+    const values = await pauseForm.validateFields();
+    await checkInApi.end(activeRecordId!, {
+      content: values.content,
+      complete: false,
+      durationSeconds: elapsed,
+    });
+    message.success('已记录学习内容~ 📝');
+    setPauseModalOpen(false);
+    clearActive();
+    fetchData();
+  };
+
+  // ===== 结束学习（完成实例） =====
+  const handleEndOpen = async () => {
+    stopTimer();
+    setEndRecordId(activeRecordId);
     setEndFiles([]);
     endForm.resetFields();
+    // 拉取之前的记录，回显学习内容和心得
+    try {
+      const records = await checkInApi.getByInstance(activeInstanceId!);
+      const prev = records.filter((r) => r.id !== activeRecordId);
+      // 取最新一条有内容的记录
+      const lastContent = [...prev].reverse().find((r) => r.content)?.content;
+      const lastNote = [...prev].reverse().find((r) => r.note)?.note;
+      if (lastContent || lastNote) {
+        endForm.setFieldsValue({
+          content: lastContent || '',
+          note: lastNote || '',
+        });
+      }
+    } catch (e) { /* 非关键，静默失败 */ }
     setEndModalOpen(true);
   };
 
   const handleEndSubmit = async () => {
     const values = await endForm.validateFields();
-    try {
-      await checkInApi.end(endRecordId!, {
-        content: values.content,
-        note: values.note,
-      }, endFiles.length > 0 ? endFiles : undefined);
-      message.success('学习完成！太棒了~ 🎉');
-      setEndModalOpen(false);
-      setActiveRecordId(null);
-      fetchData();
-    } catch (e: any) {
-      message.error(e.message);
-    }
+    await checkInApi.end(endRecordId!, {
+      content: values.content,
+      note: values.note,
+      complete: true,
+      durationSeconds: elapsed,
+    }, endFiles.length > 0 ? endFiles : undefined);
+    message.success('学习完成！太棒了~ 🎉');
+    setEndModalOpen(false);
+    clearActive();
+    fetchData();
   };
 
+  // ===== 补录打卡 =====
   const handleManualSubmit = async () => {
     const values = await manualForm.validateFields();
-    const duration = values.durationHours * 60 + (values.durationMinutes || 0);
-    try {
-      await checkInApi.manual(values.taskInstanceId, {
-        startTime: values.timeRange?.[0]?.format('YYYY-MM-DDTHH:mm:ss'),
-        endTime: values.timeRange?.[1]?.format('YYYY-MM-DDTHH:mm:ss'),
-        durationMinutes: duration,
-        content: values.content,
-        note: values.note,
-      }, manualFiles.length > 0 ? manualFiles : undefined);
-      message.success('打卡记录已保存~ 📝');
-      setManualModalOpen(false);
-      fetchData();
-    } catch (e: any) {
-      message.error(e.message);
-    }
-  };
+    let taskId: number;
 
-  const handleQuickCreate = async () => {
-    const values = await newTaskForm.validateFields();
-    try {
+    if (manualTaskType === 'existing') {
+      taskId = values.taskId;
+    } else {
       const task = await taskApi.create({ name: values.name, description: values.description });
       if (values.goalId) {
         await taskApi.bindToGoal(task.id, values.goalId);
       }
-      await instanceApi.create(task.id, today);
-      setNewTaskModalOpen(false);
-      newTaskForm.resetFields();
-      message.success('任务已创建，可以开始打卡了~ 🌟');
-      fetchData();
-    } catch (e: any) {
-      message.error(e.message);
+      taskId = task.id;
     }
+
+    const instance = await resolveInstance(taskId);
+    const duration = (values.durationHours || 0) * 60 + (values.durationMinutes || 0);
+    await checkInApi.manual(instance.id, {
+      startTime: values.timeRange?.[0]?.format('YYYY-MM-DDTHH:mm:ss'),
+      endTime: values.timeRange?.[1]?.format('YYYY-MM-DDTHH:mm:ss'),
+      durationMinutes: duration,
+      content: values.content,
+      note: values.note,
+    }, manualFiles.length > 0 ? manualFiles : undefined);
+
+    message.success('打卡记录已保存~ 📝');
+    setManualModalOpen(false);
+    manualForm.resetFields();
+    setManualFiles([]);
+    fetchData();
   };
+
+  const openManualModal = () => {
+    setManualTaskType('existing');
+    manualForm.resetFields();
+    setManualFiles([]);
+    setManualModalOpen(true);
+  };
+
+  // ===== 共享任务选择区 =====
+  const renderTaskPicker = (
+    taskType: 'existing' | 'new',
+    onTypeChange: (v: 'existing' | 'new') => void,
+  ) => (
+    <>
+      <Form.Item label="选择方式" style={{ marginBottom: 12 }}>
+        <Radio.Group
+          value={taskType}
+          onChange={(e) => onTypeChange(e.target.value)}
+          optionType="button"
+          buttonStyle="solid"
+          size="small"
+        >
+          <Radio.Button value="existing">已有任务</Radio.Button>
+          <Radio.Button value="new">新建任务</Radio.Button>
+        </Radio.Group>
+      </Form.Item>
+
+      {taskType === 'existing' ? (
+        <Form.Item name="taskId" label="选择任务" rules={[{ required: true, message: '请选择任务' }]}>
+          <Select placeholder="选择或搜索任务" showSearch className="cute-input"
+            filterOption={(input, option) =>
+              (option?.label as string || '').toLowerCase().includes(input.toLowerCase())
+            }
+            options={availableTasks.map((t) => ({ label: t.name, value: t.id }))}
+            notFoundContent="没有可用的任务"
+          />
+        </Form.Item>
+      ) : (
+        <>
+          <Form.Item name="name" label="任务名称" rules={[{ required: true, message: '请输入任务名称' }]}>
+            <Input className="cute-input" placeholder="例如：刷LeetCode一章" />
+          </Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input.TextArea className="cute-input" rows={2} />
+          </Form.Item>
+          <Form.Item name="goalId" label="关联目标">
+            <Select placeholder="选择目标（可选）" allowClear className="cute-input">
+              {goals.map((g) => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}
+            </Select>
+          </Form.Item>
+        </>
+      )}
+    </>
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -151,6 +348,10 @@ const CheckInPage: React.FC = () => {
       default: return '#b8929e';
     }
   };
+
+  // 判断当前活跃任务是否就是这个实例
+  const isActiveInstance = (instanceId: number) =>
+    activeInstanceId === instanceId && activeRecordId !== null;
 
   return (
     <div>
@@ -167,18 +368,29 @@ const CheckInPage: React.FC = () => {
         }}>
           <Text style={{ fontSize: 14, color: '#b8929e' }}>⏳ 正在学习中</Text>
           <div className="timer-display" style={{ margin: '12px 0' }}>
-            {formatElapsed(elapsed)}
+            {formatElapsed(timerDisplay)}
           </div>
-          <Button
-            className="cute-btn-timer"
-            type="primary"
-            size="large"
-            icon={<PauseCircleOutlined />}
-            onClick={() => handleEndOpen(activeRecordId)}
-            style={{ background: '#ff4757', borderColor: '#ff4757' }}
-          >
-            结束学习
-          </Button>
+          <Space>
+            <Button
+              className="cute-btn-timer"
+              size="large"
+              icon={<PauseCircleOutlined />}
+              onClick={handlePause}
+              style={{ borderColor: '#ffa502', color: '#ffa502' }}
+            >
+              暂停
+            </Button>
+            <Button
+              className="cute-btn-timer"
+              type="primary"
+              size="large"
+              danger
+              onClick={handleEndOpen}
+              style={{ background: '#ff4757', borderColor: '#ff4757' }}
+            >
+              结束学习
+            </Button>
+          </Space>
         </Card>
       )}
 
@@ -187,13 +399,14 @@ const CheckInPage: React.FC = () => {
           <Button
             type="primary"
             ghost
-            icon={<PlusOutlined />}
+            icon={<PlayCircleOutlined />}
             block
             style={{ height: 48, borderColor: '#ff6b81', color: '#ff6b81' }}
             className="cute-btn"
-            onClick={() => setNewTaskModalOpen(true)}
+            onClick={openStartModal}
+            disabled={activeRecordId !== null}
           >
-            新建任务并打卡
+            开始学习
           </Button>
         </Col>
         <Col span={12}>
@@ -202,11 +415,7 @@ const CheckInPage: React.FC = () => {
             block
             style={{ height: 48, borderColor: '#a29bfe', color: '#a29bfe' }}
             className="cute-btn"
-            onClick={() => {
-              manualForm.resetFields();
-              setManualFiles([]);
-              setManualModalOpen(true);
-            }}
+            onClick={openManualModal}
           >
             补录打卡
           </Button>
@@ -224,7 +433,7 @@ const CheckInPage: React.FC = () => {
                 actions={[
                   <Button className="cute-btn" type="primary" size="small"
                     style={{ background: '#ff6b81', borderColor: '#ff6b81' }}
-                    onClick={() => handleStart(item.id)}>
+                    onClick={() => openStartModal()}>
                     开始补
                   </Button>,
                 ]}
@@ -242,47 +451,50 @@ const CheckInPage: React.FC = () => {
 
       <Card className="cute-card" title="📋 今日任务">
         {todayInstances.length === 0 ? (
-          <Empty description="今天还没有任务，点击上方按钮创建一个吧~ 🌸" />
+          <Empty description="今天还没有任务，点击上方按钮开始学习吧~ 🌸" />
         ) : (
           <List
             dataSource={todayInstances}
             renderItem={(item) => (
               <List.Item className="log-row"
                 actions={
-                  item.status === 'TODO'
-                    ? [
-                      <Button
-                        className="cute-btn"
-                        type="primary"
-                        icon={<PlayCircleOutlined />}
-                        disabled={activeRecordId !== null}
-                        onClick={() => handleStart(item.id)}
-                      >
-                        开始学习
-                      </Button>,
-                    ]
-                    : item.status === 'IN_PROGRESS'
+                  isActiveInstance(item.id)
+                    ? []
+                    : item.status === 'TODO'
                       ? [
                         <Button
-                          className="cute-btn-timer"
+                          className="cute-btn"
                           type="primary"
-                          icon={<PauseCircleOutlined />}
-                          onClick={() => handleEndOpen(activeRecordId!)}
-                          style={{ background: '#ffa502', borderColor: '#ffa502' }}
+                          icon={<PlayCircleOutlined />}
+                          disabled={activeRecordId !== null}
+                          key="start"
+                          onClick={() => doStartInstance(item.id)}
                         >
-                          结束学习
+                          开始学习
                         </Button>,
                       ]
-                      : [
-                        <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }}>
-                          已完成 ✓
-                        </Tag>,
-                      ]
+                      : item.status === 'IN_PROGRESS'
+                        ? [
+                          <Button
+                            className="cute-btn"
+                            type="primary"
+                            icon={<PlayCircleOutlined />}
+                            key="resume"
+                            onClick={() => handleResume(item.id)}
+                          >
+                            继续学习
+                          </Button>,
+                        ]
+                        : [
+                          <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
+                            已完成 ✓
+                          </Tag>,
+                        ]
                 }
               >
                 <List.Item.Meta
                   avatar={
-                    <span style={{ fontSize: 20 }}>{emojiMap[item.status] || '📝'}</span>
+                    <span style={{ fontSize: 20 }}>{isActiveInstance(item.id) ? '⏳' : emojiMap[item.status] || '📝'}</span>
                   }
                   title={
                     <Space>
@@ -292,8 +504,11 @@ const CheckInPage: React.FC = () => {
                   }
                   description={
                     <span style={{ color: getStatusColor(item.status) }}>
-                      {item.status === 'TODO' ? '待开始' :
-                       item.status === 'IN_PROGRESS' ? '进行中' : '已完成'}
+                      {isActiveInstance(item.id)
+                        ? `进行中 ${formatElapsed(timerDisplay)}`
+                        : item.status === 'TODO' ? '待开始'
+                        : item.status === 'IN_PROGRESS' ? '进行中'
+                        : '已完成'}
                     </span>
                   }
                 />
@@ -303,8 +518,35 @@ const CheckInPage: React.FC = () => {
         )}
       </Card>
 
+      {/* ===== 开始学习 Modal ===== */}
+      <Modal className="cute-modal" title="▶️ 开始学习" open={startModalOpen}
+        onOk={handleStartSubmit} onCancel={() => setStartModalOpen(false)}
+        okText="开始学习">
+        <Form form={startForm} layout="vertical">
+          {renderTaskPicker(startTaskType, setStartTaskType)}
+        </Form>
+      </Modal>
+
+      {/* ===== 暂停 Modal ===== */}
+      <Modal className="cute-modal" title="⏸️ 暂停学习" open={pauseModalOpen}
+        onOk={handlePauseSubmit} onCancel={() => {
+          setPauseModalOpen(false);
+          startTimer();
+        }}
+        okText="提交">
+        <Form form={pauseForm} layout="vertical">
+          <Form.Item name="content" label="📖 学了什么">
+            <TextArea className="cute-input" rows={4} placeholder="记录一下刚刚学了什么..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ===== 结束学习 Modal ===== */}
       <Modal className="cute-modal" title="🎉 结束学习" open={endModalOpen}
-        onOk={handleEndSubmit} onCancel={() => setEndModalOpen(false)}>
+        onOk={handleEndSubmit} onCancel={() => {
+          setEndModalOpen(false);
+          startTimer();
+        }}>
         <Form form={endForm} layout="vertical">
           <Form.Item name="content" label="📖 学了什么">
             <TextArea className="cute-input" rows={3} placeholder="描述今天的学习内容" />
@@ -325,16 +567,16 @@ const CheckInPage: React.FC = () => {
         </Form>
       </Modal>
 
+      {/* ===== 补录打卡 Modal ===== */}
       <Modal className="cute-modal" title="📝 补录打卡" open={manualModalOpen}
-        onOk={handleManualSubmit} onCancel={() => setManualModalOpen(false)} width={560}>
+        onOk={handleManualSubmit} onCancel={() => setManualModalOpen(false)} width={560}
+        okText="补录打卡">
         <Form form={manualForm} layout="vertical">
-          <Form.Item name="taskInstanceId" label="选择任务" rules={[{ required: true }]}>
-            <Select placeholder="选择或搜索任务" showSearch className="cute-input">
-              {todayInstances.map((inst) => (
-                <Select.Option key={inst.id} value={inst.id}>{inst.taskName}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+          {renderTaskPicker(manualTaskType, (v) => {
+            setManualTaskType(v);
+            manualForm.resetFields();
+          })}
+
           <Form.Item name="timeRange" label="学习时间段">
             <TimePicker.RangePicker format="HH:mm" style={{ width: '100%' }} className="cute-input" />
           </Form.Item>
@@ -350,11 +592,11 @@ const CheckInPage: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="content" label="学习内容">
-            <TextArea className="cute-input" rows={2} />
+          <Form.Item name="content" label="📖 学了什么">
+            <TextArea className="cute-input" rows={3} placeholder="描述今天的学习内容" />
           </Form.Item>
-          <Form.Item name="note" label="学习心得">
-            <TextArea className="cute-input" rows={2} />
+          <Form.Item name="note" label="💭 学习心得">
+            <TextArea className="cute-input" rows={3} placeholder="记录你的心得与收获" />
           </Form.Item>
           <Form.Item label="🖼️ 添加图片">
             <Dragger
@@ -365,25 +607,6 @@ const CheckInPage: React.FC = () => {
               <p><InboxOutlined style={{ color: '#ff6b81' }} /></p>
               <p>点击或拖拽上传图片</p>
             </Dragger>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal className="cute-modal" title="✨ 新建任务" open={newTaskModalOpen}
-        onOk={handleQuickCreate} onCancel={() => setNewTaskModalOpen(false)}>
-        <Form form={newTaskForm} layout="vertical">
-          <Form.Item name="name" label="任务名称" rules={[{ required: true }]}>
-            <Input className="cute-input" placeholder="例如：刷LeetCode一章" />
-          </Form.Item>
-          <Form.Item name="description" label="描述">
-            <Input.TextArea className="cute-input" rows={2} />
-          </Form.Item>
-          <Form.Item name="goalId" label="关联目标">
-            <Select placeholder="选择目标（可选）" allowClear className="cute-input">
-              {goals.map((g) => (
-                <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>
-              ))}
-            </Select>
           </Form.Item>
         </Form>
       </Modal>

@@ -85,7 +85,7 @@ export interface CheckInRecord {
 export const checkInApi = {
   start: (taskInstanceId: number) =>
     client.post<any, CheckInRecord>('/checkins/start', { taskInstanceId }),
-  end: (recordId: number, data?: { content?: string; note?: string }, images?: File[]) => {
+  end: (recordId: number, data?: { content?: string; note?: string; complete?: boolean; durationSeconds?: number }, images?: File[]) => {
     const formData = new FormData();
     const blob = new Blob([JSON.stringify({ recordId, ...data })], { type: 'application/json' });
     formData.append('request', blob);

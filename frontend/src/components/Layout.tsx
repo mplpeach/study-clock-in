@@ -55,7 +55,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               textShadow: '0 2px 8px rgba(0,0,0,0.15)',
               letterSpacing: 2,
             }}>
-              🎀 学习打卡
+              📖 学习打卡
             </Typography.Title>
             <Typography.Text style={{
               color: 'rgba(255,255,255,0.8)',
