@@ -68,10 +68,10 @@ const TasksPage: React.FC = () => {
     const values = await form.validateFields();
     if (editingTask) {
       await taskApi.update(editingTask.id, values);
-      message.success('任务已更新');
+      message.success('任务已更新 ✨');
     } else {
       await taskApi.create(values);
-      message.success('任务已创建');
+      message.success('任务已创建 ✨');
     }
     setModalOpen(false);
     fetchTasks();
@@ -86,7 +86,7 @@ const TasksPage: React.FC = () => {
   const handleBind = async () => {
     const values = await bindForm.validateFields();
     await taskApi.bindToGoal(bindTaskId!, values.goalId);
-    message.success('已关联到目标');
+    message.success('已关联到目标 💕');
     setBindModalOpen(false);
     fetchTasks();
   };
@@ -96,7 +96,7 @@ const TasksPage: React.FC = () => {
       title: '任务名称',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <strong>{name}</strong>,
+      render: (name: string) => <strong style={{ color: '#5a3d4a' }}>{name}</strong>,
     },
     {
       title: '描述',
@@ -108,12 +108,12 @@ const TasksPage: React.FC = () => {
       title: '关联目标',
       key: 'goals',
       render: (_: unknown, record: Task) => {
-        if (!record.goalId) return <Tag>未关联</Tag>;
+        if (!record.goalId) return <Tag className="cute-tag">未关联</Tag>;
         const goal = goals.find((g) => g.id === record.goalId);
         return goal ? (
-          <Tag color={goal.color}>{goal.name}</Tag>
+          <Tag className="cute-tag" color={goal.color || '#ff6b81'}>{goal.name}</Tag>
         ) : (
-          <Tag>未关联</Tag>
+          <Tag className="cute-tag">未关联</Tag>
         );
       },
     },
@@ -122,11 +122,11 @@ const TasksPage: React.FC = () => {
       key: 'actions',
       render: (_: unknown, record: Task) => (
         <Space>
-          <Button type="link" icon={<LinkOutlined />}
+          <Button type="link" style={{ color: '#a29bfe' }} icon={<LinkOutlined />}
             onClick={() => { setBindTaskId(record.id); bindForm.resetFields(); setBindModalOpen(true); }}>
             关联目标
           </Button>
-          <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
+          <Button type="link" style={{ color: '#8c6f7a' }} icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
           <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>
@@ -139,24 +139,25 @@ const TasksPage: React.FC = () => {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2>学习任务</h2>
+          <h2>📋 学习任务</h2>
           <p>{goalIdFilter ? '当前目标下的任务' : '所有可复用的学习任务'}</p>
         </div>
         <Space>
           <Input.Search
+            className="cute-input"
             placeholder="搜索任务"
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             onSearch={handleSearch}
             style={{ width: 200 }}
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} className="cute-btn">
             新建任务
           </Button>
         </Space>
       </div>
 
-      <Card>
+      <Card className="cute-card">
         <Table
           dataSource={tasks}
           columns={columns}
@@ -166,21 +167,21 @@ const TasksPage: React.FC = () => {
         />
       </Card>
 
-      <Modal title={editingTask ? '编辑任务' : '新建任务'} open={modalOpen} onOk={handleSubmit} onCancel={() => setModalOpen(false)}>
+      <Modal className="cute-modal" title={editingTask ? '编辑任务' : '新建任务'} open={modalOpen} onOk={handleSubmit} onCancel={() => setModalOpen(false)}>
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入任务名称' }]}>
-            <Input placeholder="例如：刷LeetCode" />
+            <Input className="cute-input" placeholder="例如：刷LeetCode" />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} />
+            <Input.TextArea className="cute-input" rows={3} />
           </Form.Item>
         </Form>
       </Modal>
 
-      <Modal title="关联到目标" open={bindModalOpen} onOk={handleBind} onCancel={() => setBindModalOpen(false)}>
+      <Modal className="cute-modal" title="关联到目标" open={bindModalOpen} onOk={handleBind} onCancel={() => setBindModalOpen(false)}>
         <Form form={bindForm} layout="vertical">
           <Form.Item name="goalId" label="选择目标" rules={[{ required: true, message: '请选择目标' }]}>
-            <Select placeholder="请选择目标">
+            <Select className="cute-input" placeholder="请选择目标">
               {goals.map((g) => (
                 <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>
               ))}

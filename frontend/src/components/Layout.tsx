@@ -26,21 +26,43 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <AppProvider>
-      <Layout style={{ minHeight: '100vh', background: '#F5F0EB' }}>
+      {/* 浮动背景气泡 */}
+      <div className="floating-balls">
+        <div className="ball ball-1" />
+        <div className="ball ball-2" />
+        <div className="ball ball-3" />
+        <div className="ball ball-4" />
+      </div>
+
+      <Layout style={{ minHeight: '100vh', background: 'transparent', position: 'relative' }}>
         <Sider
           width={200}
+          className="cute-sider"
           style={{
-            background: '#FFFFFF',
             borderRadius: '0 20px 20px 0',
-            boxShadow: '2px 0 8px rgba(0,0,0,0.04)',
             padding: '20px 0',
+            position: 'fixed',
+            left: 0,
+            height: '100vh',
+            zIndex: 10,
           }}
         >
-          <div style={{ textAlign: 'center', padding: '20px 0 24px' }}>
-            <Typography.Title level={4} style={{ margin: 0, color: '#9DC8C8' }}>
-              🌱 学习打卡
+          <div style={{ textAlign: 'center', padding: '24px 16px 32px', position: 'relative' }}>
+            <Typography.Title level={4} style={{
+              margin: 0,
+              color: '#fff',
+              fontSize: 20,
+              textShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              letterSpacing: 2,
+            }}>
+              🎀 学习打卡
             </Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            <Typography.Text style={{
+              color: 'rgba(255,255,255,0.8)',
+              fontSize: 12,
+              display: 'block',
+              marginTop: 4,
+            }}>
               每天进步一点点
             </Typography.Text>
           </div>
@@ -49,11 +71,11 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             selectedKeys={[location.pathname]}
             items={menuItems}
             onClick={({ key }) => navigate(key)}
-            style={{ border: 'none', fontSize: 15 }}
+            style={{ fontSize: 15 }}
           />
         </Sider>
-        <Layout style={{ background: '#F5F0EB' }}>
-          <Content style={{ padding: '24px 32px', maxWidth: 900, margin: '0 auto', width: '100%' }}>
+        <Layout style={{ marginLeft: 200, background: 'transparent', position: 'relative' }}>
+          <Content className="cute-content" style={{ padding: '24px 32px', maxWidth: 900, margin: '0 auto', width: '100%', minHeight: '100vh' }}>
             {children}
           </Content>
         </Layout>

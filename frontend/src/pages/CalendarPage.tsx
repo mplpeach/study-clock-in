@@ -56,15 +56,24 @@ const CalendarPage: React.FC = () => {
     const instances = monthData[dateStr];
     if (!instances || instances.length === 0) return null;
 
-    const todo = instances.filter((i) => i.status === 'TODO').length;
-    const inProgress = instances.filter((i) => i.status === 'IN_PROGRESS').length;
     const completed = instances.filter((i) => i.status === 'COMPLETED').length;
 
     return (
       <div style={{ marginTop: 4 }}>
-        {completed > 0 && <Badge count={completed} style={{ backgroundColor: '#A8D8B9', marginRight: 4 }} />}
-        {inProgress > 0 && <Badge count={inProgress} style={{ backgroundColor: '#F7DC9C', marginRight: 4 }} />}
-        {todo > 0 && <Badge count={todo} style={{ backgroundColor: '#E8E8E8' }} />}
+        {completed > 0 ? (
+          <Badge count={completed} style={{
+            backgroundColor: '#ff6b81',
+            boxShadow: '0 2px 8px rgba(255, 107, 129, 0.3)',
+          }} />
+        ) : (
+          <span style={{
+            display: 'inline-block',
+            width: 8, height: 8,
+            borderRadius: '50%',
+            background: '#ff6b81',
+            opacity: 0.4,
+          }} />
+        )}
       </div>
     );
   };
@@ -74,31 +83,26 @@ const CalendarPage: React.FC = () => {
   };
 
   const headerRender = ({ value, onChange }: { value: Dayjs; onChange: (d: Dayjs) => void }) => {
-    const monthOptions = [];
-    for (let i = 0; i < 12; i++) {
-      monthOptions.push(i);
-    }
-    const year = value.year();
-    const month = value.month();
-
     return (
       <Row justify="space-between" style={{ padding: '0 8px 16px' }} align="middle">
         <Col>
           <Button
             icon={<LeftOutlined />}
             type="text"
+            className="cute-btn"
             onClick={() => onChange(value.subtract(1, 'month'))}
           />
         </Col>
         <Col>
-          <span style={{ fontSize: 18, fontWeight: 500, margin: '0 16px', color: '#4A4A4A' }}>
-            {year} 年 {month + 1} 月
+          <span style={{ fontSize: 18, fontWeight: 600, color: '#5a3d4a' }}>
+            {value.year()} 年 {value.month() + 1} 月
           </span>
         </Col>
         <Col>
           <Button
             icon={<RightOutlined />}
             type="text"
+            className="cute-btn"
             onClick={() => onChange(value.add(1, 'month'))}
           />
         </Col>
@@ -109,33 +113,37 @@ const CalendarPage: React.FC = () => {
   return (
     <div>
       <div className="page-header">
-        <h2>打卡日历</h2>
+        <h2>📅 打卡日历</h2>
         <p>查看每天的学习记录，点击日期查看详情</p>
       </div>
 
-      <Card style={{ borderRadius: 16 }}>
-        <Calendar
-          value={currentMonth}
-          onChange={(date) => setCurrentMonth(date)}
-          cellRender={(date) => dateCellRender(date as Dayjs)}
-          onSelect={(date) => handleDateSelect(date as Dayjs)}
-          headerRender={headerRender}
-        />
+      <Card className="cute-card">
+        <div className="cute-calendar">
+          <Calendar
+            value={currentMonth}
+            onChange={(date) => setCurrentMonth(date)}
+            cellRender={(date) => dateCellRender(date as Dayjs)}
+            onSelect={(date) => handleDateSelect(date as Dayjs)}
+            headerRender={headerRender}
+            fullscreen={false}
+          />
+        </div>
       </Card>
 
       <Modal
-        title={`${selectedDate} 的任务`}
+        className="cute-modal"
+        title={<span style={{ color: '#5a3d4a' }}>📅 {selectedDate} 的任务</span>}
         open={detailModalOpen}
         onCancel={() => setDetailModalOpen(false)}
         footer={null}
       >
         {dateInstances.length === 0 ? (
-          <Empty description="这天没有任务" />
+          <Empty description="这天没有任务 🌸" />
         ) : (
           <List
             dataSource={dateInstances}
             renderItem={(item) => (
-              <List.Item
+              <List.Item className="log-row"
                 actions={[
                   <Popconfirm title="确定删除？" onConfirm={() => handleDeleteInstance(item.id)}>
                     <Button type="text" danger icon={<DeleteOutlined />} />
@@ -143,21 +151,19 @@ const CalendarPage: React.FC = () => {
                 ]}
               >
                 <List.Item.Meta
-                  title={item.taskName}
+                  title={<span style={{ color: '#5a3d4a' }}>{item.taskName}</span>}
                   description={
                     <div>
-                      {item.goalName && <Tag>{item.goalName}</Tag>}
-                      <Tag
-                        color={
-                          item.status === 'COMPLETED' ? 'success' :
-                          item.status === 'IN_PROGRESS' ? 'warning' : 'default'
-                        }
+                      {item.goalName && <Tag className="cute-tag" color="#a29bfe">{item.goalName}</Tag>}
+                      <Tag className="cute-tag"
+                        color={item.status === 'COMPLETED' ? '#2ed573' :
+                               item.status === 'IN_PROGRESS' ? '#ffa502' : '#b8929e'}
                       >
                         {item.status === 'TODO' ? '待开始' :
                          item.status === 'IN_PROGRESS' ? '进行中' : '已完成'}
                       </Tag>
                       {isOverdue(item.scheduledDate) && item.status !== 'COMPLETED' && (
-                        <Tag color="error" className="overdue-tag">逾期</Tag>
+                        <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
                       )}
                     </div>
                   }

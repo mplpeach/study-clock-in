@@ -1,30 +1,48 @@
 import React from 'react';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import '../styles/cute.css';
 
-const theme = {
+const cuteTheme = {
   token: {
-    colorPrimary: '#9DC8C8',
-    colorSuccess: '#A8D8B9',
-    colorWarning: '#F7DC9C',
-    colorError: '#F4A7A7',
-    colorInfo: '#B5D0E2',
+    colorPrimary: '#ff6b81',
+    colorSuccess: '#2ed573',
+    colorWarning: '#ffa502',
+    colorError: '#ff4757',
+    colorInfo: '#a29bfe',
     borderRadius: 12,
-    colorBgContainer: '#FFFFFF',
-    colorBgLayout: '#F5F0EB',
-    fontFamily: '"PingFang SC", "Microsoft YaHei", sans-serif',
+    colorBgContainer: '#ffffff',
+    colorBgLayout: '#fff5f7',
+    colorText: '#5a3d4a',
+    colorTextSecondary: '#8c6f7a',
+    colorTextTertiary: '#b8929e',
+    fontFamily: '"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+    fontSize: 14,
+    boxShadow: '0 4px 16px rgba(255, 107, 129, 0.08)',
   },
   components: {
     Card: {
       borderRadius: 16,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
     },
     Button: {
       borderRadius: 20,
       controlHeight: 40,
+      primaryShadow: '0 4px 12px rgba(255, 107, 129, 0.3)',
     },
     Tag: {
+      borderRadius: 8,
+    },
+    Input: {
+      borderRadius: 12,
+    },
+    Modal: {
+      borderRadius: 20,
+    },
+    Menu: {
       borderRadius: 10,
+    },
+    Table: {
+      borderRadius: 16,
     },
   },
 };
@@ -35,7 +53,7 @@ interface Props {
 
 const AppProvider: React.FC<Props> = ({ children }) => {
   return (
-    <ConfigProvider theme={theme} locale={zhCN}>
+    <ConfigProvider theme={cuteTheme} locale={zhCN}>
       {children}
     </ConfigProvider>
   );

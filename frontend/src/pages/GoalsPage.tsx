@@ -41,13 +41,13 @@ const GoalsPage: React.FC = () => {
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
-    const color = typeof values.color === 'string' ? values.color : values.color?.toHexString?.() || '#9DC8C8';
+    const color = typeof values.color === 'string' ? values.color : values.color?.toHexString?.() || '#ff6b81';
     if (editingGoal) {
       await goalApi.update(editingGoal.id, { ...values, color });
-      message.success('目标已更新');
+      message.success('目标已更新 ✨');
     } else {
       await goalApi.create({ ...values, color });
-      message.success('目标已创建');
+      message.success('目标已创建 ✨');
     }
     setModalOpen(false);
     fetchGoals();
@@ -63,10 +63,10 @@ const GoalsPage: React.FC = () => {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2>学习目标</h2>
+          <h2>🎯 学习目标</h2>
           <p>管理你的学习大方向</p>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} className="cute-btn">
           新建目标
         </Button>
       </div>
@@ -78,24 +78,24 @@ const GoalsPage: React.FC = () => {
           {goals.map((goal) => (
             <Col span={24} key={goal.id}>
               <Card
-                style={{ borderLeft: `4px solid ${goal.color || '#9DC8C8'}` }}
+                className="goal-card"
                 actions={[
                   <Button type="text" icon={<UnorderedListOutlined />}
-                    onClick={() => navigate(`/tasks?goalId=${goal.id}`)}>
+                    onClick={() => navigate(`/tasks?goalId=${goal.id}`)} key="tasks">
                     查看任务
                   </Button>,
-                  <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(goal)}>
+                  <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(goal)} key="edit">
                     编辑
                   </Button>,
-                  <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(goal.id)}>
+                  <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(goal.id)} key="delete">
                     <Button type="text" danger icon={<DeleteOutlined />}>删除</Button>
                   </Popconfirm>,
                 ]}
               >
                 <Card.Meta
                   title={
-                    <span>
-                      <span className="goal-color-dot" style={{ background: goal.color || '#9DC8C8' }} />
+                    <span style={{ fontSize: 16, fontWeight: 600, color: '#5a3d4a' }}>
+                      <span className="goal-color-dot" style={{ background: goal.color || '#ff6b81' }} />
                       {goal.name}
                     </span>
                   }
@@ -103,9 +103,9 @@ const GoalsPage: React.FC = () => {
                 />
                 <div style={{ marginTop: 12 }}>
                   {goal.tasks?.length > 0 ? (
-                    goal.tasks.map((t) => <Tag key={t.id}>{t.name}</Tag>)
+                    goal.tasks.map((t) => <Tag className="cute-tag" color="#ff6b81" key={t.id}>{t.name}</Tag>)
                   ) : (
-                    <span style={{ color: '#ccc', fontSize: 13 }}>还未关联任务</span>
+                    <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
                   )}
                 </div>
               </Card>
@@ -115,6 +115,7 @@ const GoalsPage: React.FC = () => {
       )}
 
       <Modal
+        className="cute-modal"
         title={editingGoal ? '编辑目标' : '新建目标'}
         open={modalOpen}
         onOk={handleSubmit}
@@ -122,12 +123,12 @@ const GoalsPage: React.FC = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
-            <Input placeholder="例如：算法学习" />
+            <Input className="cute-input" placeholder="例如：算法学习" />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="简单描述这个目标" />
+            <Input.TextArea className="cute-input" rows={3} placeholder="简单描述这个目标" />
           </Form.Item>
-          <Form.Item name="color" label="颜色" initialValue="#9DC8C8">
+          <Form.Item name="color" label="颜色" initialValue="#ff6b81">
             <ColorPicker />
           </Form.Item>
         </Form>

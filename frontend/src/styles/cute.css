@@ -1,0 +1,312 @@
+/* ============ 全局背景渐变 ============ */
+body {
+  background: linear-gradient(135deg, #fff5f7 0%, #fff0f6 50%, #f8f0ff 100%);
+  min-height: 100vh;
+}
+
+/* ============ 浮动背景气泡 ============ */
+.floating-balls {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.ball {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: floatBall 6s ease-in-out infinite;
+}
+
+.ball-1 {
+  width: 200px; height: 200px;
+  background: #ff6b81;
+  top: -40px; right: -40px;
+  animation-delay: 0s;
+}
+
+.ball-2 {
+  width: 150px; height: 150px;
+  background: #a29bfe;
+  bottom: -30px; left: -30px;
+  animation-delay: 1.5s;
+}
+
+.ball-3 {
+  width: 120px; height: 120px;
+  background: #ffa502;
+  bottom: 60px; right: 40px;
+  animation-delay: 3s;
+}
+
+.ball-4 {
+  width: 80px; height: 80px;
+  background: #2ed573;
+  top: 40%; left: 10%;
+  animation-delay: 0.8s;
+}
+
+/* ============ 关键帧动画 ============ */
+@keyframes floatBall {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ============ 页面通用 ============ */
+.page-header {
+  animation: fadeInUp 0.5s ease-out;
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0 0 4px;
+  color: #5a3d4a !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+}
+
+.page-header p {
+  margin: 0;
+  color: #b8929e;
+  font-size: 13px;
+}
+
+/* ============ 统计卡片 ============ */
+.stat-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+  cursor: default;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(255, 107, 129, 0.15);
+}
+
+.stat-card .stat-top-bar {
+  height: 3px;
+  margin: 0;
+}
+
+.stat-card.pink .stat-top-bar { background: linear-gradient(90deg, #ff6b81, #ffa2b0); }
+.stat-card.orange .stat-top-bar { background: linear-gradient(90deg, #ffa502, #ffbe3f); }
+.stat-card.green .stat-top-bar { background: linear-gradient(90deg, #2ed573, #7bed9f); }
+.stat-card.purple .stat-top-bar { background: linear-gradient(90deg, #a29bfe, #c8c4ff); }
+
+.stat-card .stat-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.stat-card .stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #5a3d4a;
+}
+
+.stat-card .stat-label {
+  font-size: 13px;
+  color: #b8929e;
+  margin-top: 4px;
+}
+
+/* ============ 目标卡片 ============ */
+.goal-card {
+  border-radius: 16px !important;
+  border: 2px solid #ffe0e6 !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.goal-card:hover {
+  border-color: #ffb8c6 !important;
+  box-shadow: 0 12px 32px rgba(255, 107, 129, 0.12);
+  transform: translateY(-2px);
+}
+
+.goal-card .ant-card-head {
+  border-bottom: none;
+}
+
+/* ============ 打卡日历 ============ */
+.cute-calendar .ant-picker-calendar-date-today {
+  border-color: #ff6b81 !important;
+  font-weight: 700;
+}
+
+.cute-calendar .ant-picker-cell-inner {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cute-calendar .ant-picker-cell-inner:hover {
+  transform: scale(1.15);
+  z-index: 1;
+}
+
+/* ============ 侧边栏 ============ */
+.cute-sider {
+  background: linear-gradient(180deg, #ff6b81 0%, #a29bfe 100%) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.cute-sider::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.cute-sider .ant-menu {
+  background: transparent !important;
+  border: none !important;
+}
+
+.cute-sider .ant-menu-item {
+  color: rgba(255,255,255,0.8) !important;
+  border-radius: 10px !important;
+  margin: 4px 12px !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cute-sider .ant-menu-item:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,0.15) !important;
+  transform: translateX(4px);
+}
+
+.cute-sider .ant-menu-item-selected {
+  color: #ff6b81 !important;
+  background: rgba(255,255,255,0.9) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ============ 按钮 ============ */
+.cute-btn {
+  border-radius: 20px !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cute-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 129, 0.3);
+}
+
+.cute-btn-timer {
+  border-radius: 20px !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cute-btn-timer:hover {
+  transform: scale(1.05);
+}
+
+/* ============ 输入框 ============ */
+.cute-input {
+  border-radius: 12px !important;
+  border: 2px solid #ffe0e6 !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cute-input:hover {
+  border-color: #ffb8c6 !important;
+}
+
+.cute-input:focus,
+.cute-input-focused {
+  border-color: #ff6b81 !important;
+  box-shadow: 0 0 0 2px rgba(255, 107, 129, 0.15) !important;
+}
+
+/* ============ 标签 ============ */
+.cute-tag {
+  border-radius: 8px !important;
+  padding: 2px 10px !important;
+  font-size: 12px !important;
+}
+
+/* ============ Modal ============ */
+.cute-modal .ant-modal-content {
+  border-radius: 20px !important;
+  overflow: hidden;
+}
+
+/* ============ 卡片通用 ============ */
+.cute-card {
+  border-radius: 16px !important;
+  box-shadow: 0 4px 16px rgba(255, 107, 129, 0.08);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cute-card:hover {
+  box-shadow: 0 12px 32px rgba(255, 107, 129, 0.15);
+}
+
+/* ============ 学习日志行 ============ */
+.log-row:hover {
+  background: rgba(255, 107, 129, 0.04);
+}
+
+/* ============ 计时器 ============ */
+.timer-display {
+  font-size: 52px;
+  font-weight: 700;
+  font-family: 'Segoe UI', 'PingFang SC', monospace;
+  color: #5a3d4a;
+  letter-spacing: 4px;
+}
+
+/* ============ 内容区域 */
+.cute-content {
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* ============ 逾期脉冲 ============ */
+.overdue-pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
