@@ -107,6 +107,12 @@ public class TaskServiceImpl implements TaskService {
         dto.setId(task.getId());
         dto.setName(task.getName());
         dto.setDescription(task.getDescription());
+        java.util.List<Long> goalIds = goalTaskRepository.findByTaskId(task.getId())
+                .stream().map(GoalTask::getGoalId).collect(Collectors.toList());
+        dto.setGoalIds(goalIds);
+        if (!goalIds.isEmpty()) {
+            dto.setGoalId(goalIds.get(0));
+        }
         return dto;
     }
 }

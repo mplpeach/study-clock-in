@@ -9,6 +9,7 @@ public class TaskDTO {
     private String name;
     private String description;
     private Long goalId;
+    private java.util.List<Long> goalIds;
 
     @Data
     public static class CreateRequest {

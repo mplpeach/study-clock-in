@@ -293,6 +293,17 @@ body {
   letter-spacing: 4px;
 }
 
+/* ============ 表格 ============ */
+.cute-table .ant-table-thead > tr > th,
+.cute-table .ant-table-tbody > tr > td {
+  text-align: center !important;
+}
+.cute-table .ant-table-thead > tr > th {
+  background: #fff5f7 !important;
+  color: #5a3d4a !important;
+  font-weight: 600 !important;
+}
+
 /* ============ 内容区域 */
 .cute-content {
   position: relative;

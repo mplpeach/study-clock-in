@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, Button, Modal, Form, Input, ColorPicker, Row, Col, Tag, Empty, Popconfirm, message,
+  Card, Button, Modal, Form, Input, Row, Col, Tag, Empty, Popconfirm, message,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { goalApi } from '../api';
@@ -35,18 +35,17 @@ const GoalsPage: React.FC = () => {
 
   const openEdit = (goal: Goal) => {
     setEditingGoal(goal);
-    form.setFieldsValue({ name: goal.name, description: goal.description, color: goal.color });
+    form.setFieldsValue({ name: goal.name, description: goal.description });
     setModalOpen(true);
   };
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
-    const color = typeof values.color === 'string' ? values.color : values.color?.toHexString?.() || '#ff6b81';
     if (editingGoal) {
-      await goalApi.update(editingGoal.id, { ...values, color });
+      await goalApi.update(editingGoal.id, values);
       message.success('目标已更新 ✨');
     } else {
-      await goalApi.create({ ...values, color });
+      await goalApi.create({ ...values, color: '#ff6b81' });
       message.success('目标已创建 ✨');
     }
     setModalOpen(false);
@@ -127,9 +126,6 @@ const GoalsPage: React.FC = () => {
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea className="cute-input" rows={3} placeholder="简单描述这个目标" />
-          </Form.Item>
-          <Form.Item name="color" label="颜色" initialValue="#ff6b81">
-            <ColorPicker />
           </Form.Item>
         </Form>
       </Modal>

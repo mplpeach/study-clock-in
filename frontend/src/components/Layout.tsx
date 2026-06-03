@@ -75,7 +75,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           />
         </Sider>
         <Layout style={{ marginLeft: 200, background: 'transparent', position: 'relative' }}>
-          <Content className="cute-content" style={{ padding: '24px 32px', maxWidth: 900, margin: '0 auto', width: '100%', minHeight: '100vh' }}>
+          <Content className="cute-content" style={{ padding: '24px 32px', maxWidth: 1100, margin: '0 auto', width: '100%', minHeight: '100vh' }}>
             {children}
           </Content>
         </Layout>

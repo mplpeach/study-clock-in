@@ -14,6 +14,7 @@ export interface Task {
   name: string;
   description?: string;
   goalId?: number;
+  goalIds?: number[];
 }
 
 export const goalApi = {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Card, Calendar, Badge, Modal, List, Tag, Button, message, Empty, Row, Col, Popconfirm,
 } from 'antd';
@@ -13,6 +13,7 @@ const CalendarPage: React.FC = () => {
   const [dateInstances, setDateInstances] = useState<TaskInstance[]>([]);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(dayjs());
+  const panelChanging = useRef(false);
 
   const fetchMonthData = async (date: Dayjs) => {
     try {
@@ -127,9 +128,18 @@ const CalendarPage: React.FC = () => {
         <div className="cute-calendar">
           <Calendar
             value={currentMonth}
-            onPanelChange={(date) => setCurrentMonth(date)}
+            onPanelChange={(date) => {
+              panelChanging.current = true;
+              setCurrentMonth(date);
+            }}
             cellRender={(date) => dateCellRender(date as Dayjs)}
-            onSelect={(date) => handleDateSelect(date as Dayjs)}
+            onSelect={(date) => {
+              if (panelChanging.current) {
+                panelChanging.current = false;
+                return;
+              }
+              handleDateSelect(date as Dayjs);
+            }}
             headerRender={headerRender}
             fullscreen={false}
           />

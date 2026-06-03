@@ -96,39 +96,48 @@ const TasksPage: React.FC = () => {
       title: '任务名称',
       dataIndex: 'name',
       key: 'name',
+      width: 180,
       render: (name: string) => <strong style={{ color: '#5a3d4a' }}>{name}</strong>,
     },
     {
       title: '描述',
       dataIndex: 'description',
       key: 'description',
+      width: 200,
       ellipsis: true,
     },
     {
       title: '关联目标',
       key: 'goals',
+      width: 200,
       render: (_: unknown, record: Task) => {
-        if (!record.goalId) return <Tag className="cute-tag">未关联</Tag>;
-        const goal = goals.find((g) => g.id === record.goalId);
-        return goal ? (
-          <Tag className="cute-tag" color={goal.color || '#ff6b81'}>{goal.name}</Tag>
-        ) : (
-          <Tag className="cute-tag">未关联</Tag>
+        const ids = record.goalIds || (record.goalId ? [record.goalId] : []);
+        if (ids.length === 0) return <Tag className="cute-tag">未关联</Tag>;
+        return (
+          <Space size={4} wrap>
+            {ids.map((gid: number) => {
+              const goal = goals.find((g) => g.id === gid);
+              return goal ? (
+                <Tag key={gid} className="cute-tag" color={goal.color || '#ff6b81'}>{goal.name}</Tag>
+              ) : null;
+            })}
+          </Space>
         );
       },
     },
     {
       title: '操作',
       key: 'actions',
+      width: 320,
       render: (_: unknown, record: Task) => (
         <Space>
-          <Button type="link" style={{ color: '#a29bfe' }} icon={<LinkOutlined />}
+          <Button type="link" style={{ color: '#a29bfe' }} icon={<LinkOutlined />} size="small"
             onClick={() => { setBindTaskId(record.id); bindForm.resetFields(); setBindModalOpen(true); }}>
-            关联目标
+            关联
           </Button>
-          <Button type="link" style={{ color: '#8c6f7a' }} icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
+          <Button type="link" style={{ color: '#8c6f7a' }} icon={<EditOutlined />} size="small" onClick={() => openEdit(record)}>编辑</Button>
           <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+            <Button type="link" danger icon={<DeleteOutlined />} size="small">删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -163,6 +172,8 @@ const TasksPage: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={false}
+          scroll={{ x: 900 }}
+          className="cute-table"
         />
       </Card>
 
