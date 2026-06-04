@@ -57,7 +57,7 @@ const StatisticsPage: React.FC = () => {
       splitLine: { show: false },
       dayLabel: { show: false },
       monthLabel: { show: true, color: '#b8929e', fontSize: 11 },
-      yearLabel: { position: 'top', color: '#b8929e', fontSize: 13 },
+      yearLabel: { position: 'top', color: '#b8929e', fontSize: 30 },
     },
     series: [
       {
