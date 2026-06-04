@@ -26,4 +26,6 @@ public interface TaskInstanceRepository extends JpaRepository<TaskInstance, Long
     List<TaskInstance> findByTaskIdOrderByDateDesc(@Param("taskId") Long taskId, @Param("userId") Long userId);
 
     boolean existsByTaskIdAndScheduledDateAndUserId(Long taskId, LocalDate date, Long userId);
+
+    List<TaskInstance> findByTaskId(Long taskId);
 }

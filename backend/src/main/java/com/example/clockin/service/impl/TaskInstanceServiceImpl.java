@@ -1,9 +1,7 @@
 package com.example.clockin.service.impl;
 
 import com.example.clockin.dto.TaskInstanceDTO;
-import com.example.clockin.entity.GoalTask;
-import com.example.clockin.entity.Task;
-import com.example.clockin.entity.TaskInstance;
+import com.example.clockin.entity.*;
 import com.example.clockin.enums.TaskInstanceStatus;
 import com.example.clockin.repository.*;
 import com.example.clockin.service.TaskInstanceService;
@@ -22,15 +20,21 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
     private final TaskRepository taskRepository;
     private final GoalTaskRepository goalTaskRepository;
     private final GoalRepository goalRepository;
+    private final CheckInRecordRepository checkInRecordRepository;
+    private final CheckInImageRepository checkInImageRepository;
 
     public TaskInstanceServiceImpl(TaskInstanceRepository instanceRepository,
                                    TaskRepository taskRepository,
                                    GoalTaskRepository goalTaskRepository,
-                                   GoalRepository goalRepository) {
+                                   GoalRepository goalRepository,
+                                   CheckInRecordRepository checkInRecordRepository,
+                                   CheckInImageRepository checkInImageRepository) {
         this.instanceRepository = instanceRepository;
         this.taskRepository = taskRepository;
         this.goalTaskRepository = goalTaskRepository;
         this.goalRepository = goalRepository;
+        this.checkInRecordRepository = checkInRecordRepository;
+        this.checkInImageRepository = checkInImageRepository;
     }
 
     @Override
@@ -91,7 +95,26 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
     @Override
     @Transactional
     public void deleteInstance(Long instanceId) {
+        List<CheckInRecord> records = checkInRecordRepository.findByTaskInstanceId(instanceId);
+        for (CheckInRecord record : records) {
+            checkInImageRepository.deleteByRecordId(record.getId());
+            checkInRecordRepository.deleteById(record.getId());
+        }
         instanceRepository.deleteById(instanceId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteInstancesByTaskId(Long taskId) {
+        List<TaskInstance> instances = instanceRepository.findByTaskId(taskId);
+        for (TaskInstance instance : instances) {
+            List<CheckInRecord> records = checkInRecordRepository.findByTaskInstanceId(instance.getId());
+            for (CheckInRecord record : records) {
+                checkInImageRepository.deleteByRecordId(record.getId());
+                checkInRecordRepository.deleteById(record.getId());
+            }
+        }
+        instanceRepository.deleteAll(instances);
     }
 
     private TaskInstanceDTO toDTO(TaskInstance instance) {

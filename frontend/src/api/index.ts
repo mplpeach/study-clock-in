@@ -15,6 +15,9 @@ export interface Task {
   description?: string;
   goalId?: number;
   goalIds?: number[];
+  scheduledDate?: string;
+  repeatRule?: string;
+  weeklyDays?: string;
 }
 
 export const goalApi = {
@@ -31,9 +34,9 @@ export const taskApi = {
   getAll: () => client.get<any, Task[]>('/tasks'),
   getById: (id: number) => client.get<any, Task>(`/tasks/${id}`),
   search: (keyword: string) => client.get<any, Task[]>('/tasks/search', { params: { keyword } }),
-  create: (data: { name: string; description?: string }) =>
+  create: (data: { name: string; description?: string; scheduledDate?: string; repeatRule?: string; weeklyDays?: string }) =>
     client.post<any, Task>('/tasks', data),
-  update: (id: number, data: { name: string; description?: string }) =>
+  update: (id: number, data: { name?: string; description?: string; scheduledDate?: string; repeatRule?: string; weeklyDays?: string }) =>
     client.put<any, Task>(`/tasks/${id}`, data),
   delete: (id: number) => client.delete(`/tasks/${id}`),
   bindToGoal: (taskId: number, goalId: number) =>

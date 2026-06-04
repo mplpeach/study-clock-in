@@ -12,4 +12,5 @@ public interface TaskInstanceService {
     Map<String, List<TaskInstanceDTO>> getMonthInstances(Long userId, int year, int month);
     List<TaskInstanceDTO> getOverdueInstances(Long userId);
     void deleteInstance(Long instanceId);
+    void deleteInstancesByTaskId(Long taskId);
 }

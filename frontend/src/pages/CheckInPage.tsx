@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Card, Button, Modal, Form, Input, Select, TimePicker, message, Row, Col,
-  Tag, Empty, Upload, List, Space, Typography, Radio,
+  Tag, Empty, Upload, List, Space, Typography, Popconfirm,
 } from 'antd';
 import {
   PlayCircleOutlined, PauseCircleOutlined,
-  HistoryOutlined, InboxOutlined,
+  HistoryOutlined, InboxOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { instanceApi, checkInApi, taskApi, goalApi } from '../api';
@@ -188,6 +188,14 @@ const CheckInPage: React.FC = () => {
     } catch (e: any) { message.error(e.message); }
   };
 
+  const handleDeleteInstance = async (instanceId: number) => {
+    try {
+      await instanceApi.delete(instanceId);
+      message.success('任务已删除');
+      fetchData();
+    } catch (e: any) { message.error(e.message); }
+  };
+
   // ===== 暂停（提交内容 + 时长，但不完成实例） =====
   const handlePause = async () => {
     stopTimer();
@@ -301,16 +309,15 @@ const CheckInPage: React.FC = () => {
   ) => (
     <>
       <Form.Item label="选择方式" style={{ marginBottom: 12 }}>
-        <Radio.Group
+        <Select
+          className="cute-input"
           value={taskType}
-          onChange={(e) => onTypeChange(e.target.value)}
-          optionType="button"
-          buttonStyle="solid"
-          size="small"
-        >
-          <Radio.Button value="existing">已有任务</Radio.Button>
-          <Radio.Button value="new">新建任务</Radio.Button>
-        </Radio.Group>
+          onChange={(value) => onTypeChange(value as 'existing' | 'new')}
+          options={[
+            { label: '已有任务', value: 'existing' },
+            { label: '新建任务', value: 'new' },
+          ]}
+        />
       </Form.Item>
 
       {taskType === 'existing' ? (
@@ -460,36 +467,50 @@ const CheckInPage: React.FC = () => {
                 actions={
                   isActiveInstance(item.id)
                     ? []
-                    : item.status === 'TODO'
-                      ? [
-                        <Button
-                          className="cute-btn"
-                          type="primary"
-                          icon={<PlayCircleOutlined />}
-                          disabled={activeRecordId !== null}
-                          key="start"
-                          onClick={() => doStartInstance(item.id)}
+                    : [
+                        ...(item.status === 'TODO'
+                          ? [
+                            <Button
+                              className="cute-btn"
+                              type="primary"
+                              icon={<PlayCircleOutlined />}
+                              disabled={activeRecordId !== null}
+                              key="start"
+                              onClick={() => doStartInstance(item.id)}
+                            >
+                              开始学习
+                            </Button>,
+                          ]
+                          : item.status === 'IN_PROGRESS'
+                          ? [
+                            <Button
+                              className="cute-btn"
+                              type="primary"
+                              icon={<PlayCircleOutlined />}
+                              key="resume"
+                              onClick={() => handleResume(item.id)}
+                            >
+                              继续学习
+                            </Button>,
+                          ]
+                          : [
+                            <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
+                              已完成 ✓
+                            </Tag>,
+                          ]),
+                        <Popconfirm
+                          key="delete"
+                          title="确定删除这条任务吗？"
+                          onConfirm={() => handleDeleteInstance(item.id)}
                         >
-                          开始学习
-                        </Button>,
-                      ]
-                      : item.status === 'IN_PROGRESS'
-                        ? [
                           <Button
-                            className="cute-btn"
-                            type="primary"
-                            icon={<PlayCircleOutlined />}
-                            key="resume"
-                            onClick={() => handleResume(item.id)}
-                          >
-                            继续学习
-                          </Button>,
-                        ]
-                        : [
-                          <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
-                            已完成 ✓
-                          </Tag>,
-                        ]
+                            type="link"
+                            danger
+                            size="small"
+                            icon={<DeleteOutlined />}
+                          />
+                        </Popconfirm>,
+                      ]
                 }
               >
                 <List.Item.Meta

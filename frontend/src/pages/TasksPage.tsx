@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, Button, Modal, Form, Input, Select, Table, Tag, Popconfirm, message, Space,
+  Card, Button, Modal, Form, Input, Select, DatePicker, Checkbox, Table, Tag, Popconfirm, message, Space,
 } from 'antd';
 import { PlusOutlined, LinkOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { taskApi, goalApi } from '../api';
 import type { Task, Goal } from '../api';
 import { useSearchParams } from 'react-router-dom';
@@ -16,6 +17,7 @@ const TasksPage: React.FC = () => {
   const [bindModalOpen, setBindModalOpen] = useState(false);
   const [bindTaskId, setBindTaskId] = useState<number | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [repeatRule, setRepeatRule] = useState<string>('NONE');
   const [form] = Form.useForm();
   const [bindForm] = Form.useForm();
   const [searchParams] = useSearchParams();
@@ -54,23 +56,40 @@ const TasksPage: React.FC = () => {
 
   const openCreate = () => {
     setEditingTask(null);
+    setRepeatRule('NONE');
     form.resetFields();
     setModalOpen(true);
   };
 
   const openEdit = (task: Task) => {
     setEditingTask(task);
-    form.setFieldsValue({ name: task.name, description: task.description });
+    setRepeatRule(task.repeatRule || 'NONE');
+    form.setFieldsValue({
+      name: task.name,
+      description: task.description,
+      scheduledDate: task.scheduledDate ? dayjs(task.scheduledDate) : undefined,
+      repeatRule: task.repeatRule || 'NONE',
+      weeklyDays: task.weeklyDays ? task.weeklyDays.split(',').map(Number) : [],
+    });
     setModalOpen(true);
   };
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
+    const payload: any = {
+      name: values.name,
+      description: values.description,
+      scheduledDate: values.scheduledDate ? values.scheduledDate.format('YYYY-MM-DD') : undefined,
+      repeatRule: values.repeatRule || 'NONE',
+      weeklyDays: values.repeatRule === 'WEEKLY' && values.weeklyDays?.length
+        ? values.weeklyDays.sort().join(',')
+        : undefined,
+    };
     if (editingTask) {
-      await taskApi.update(editingTask.id, values);
+      await taskApi.update(editingTask.id, payload);
       message.success('任务已更新 ✨');
     } else {
-      await taskApi.create(values);
+      await taskApi.create(payload);
       message.success('任务已创建 ✨');
     }
     setModalOpen(false);
@@ -103,8 +122,32 @@ const TasksPage: React.FC = () => {
       title: '描述',
       dataIndex: 'description',
       key: 'description',
-      width: 200,
+      width: 160,
       ellipsis: true,
+    },
+    {
+      title: '重复',
+      dataIndex: 'repeatRule',
+      key: 'repeatRule',
+      width: 130,
+      render: (rule: string, record: Task) => {
+        const labelMap: Record<string, string> = { NONE: '不重复', DAILY: '每天', WEEKLY: '每周' };
+        const dayNames = ['', '一', '二', '三', '四', '五', '六', '日'];
+        const label = labelMap[rule] || '不重复';
+        if (rule === 'WEEKLY' && record.weeklyDays) {
+          const days = record.weeklyDays.split(',').map((d) => dayNames[Number(d)]).join(',');
+          return <Tag className="cute-tag" color="#a29bfe">{label} ({days})</Tag>;
+        }
+        if (!rule || rule === 'NONE') return <Tag className="cute-tag">不重复</Tag>;
+        return <Tag className="cute-tag" color="#4ecdc4">{label}</Tag>;
+      },
+    },
+    {
+      title: '安排日期',
+      dataIndex: 'scheduledDate',
+      key: 'scheduledDate',
+      width: 110,
+      render: (d: string) => d || '-',
     },
     {
       title: '关联目标',
@@ -172,19 +215,50 @@ const TasksPage: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={false}
-          scroll={{ x: 900 }}
+          scroll={{ x: 1100 }}
           className="cute-table"
         />
       </Card>
 
-      <Modal className="cute-modal" title={editingTask ? '编辑任务' : '新建任务'} open={modalOpen} onOk={handleSubmit} onCancel={() => setModalOpen(false)}>
-        <Form form={form} layout="vertical">
+      <Modal className="cute-modal" title={editingTask ? '编辑任务' : '新建任务'} open={modalOpen} onOk={handleSubmit} onCancel={() => setModalOpen(false)} width={520}>
+        <Form form={form} layout="vertical" initialValues={{ repeatRule: 'NONE' }}>
           <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入任务名称' }]}>
             <Input className="cute-input" placeholder="例如：刷LeetCode" />
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea className="cute-input" rows={3} />
           </Form.Item>
+          <Form.Item name="repeatRule" label="重复规则" initialValue="NONE">
+            <Select
+              className="cute-input"
+              onChange={(value) => setRepeatRule(value)}
+              options={[
+                { label: '不重复', value: 'NONE' },
+                { label: '每天', value: 'DAILY' },
+                { label: '每周', value: 'WEEKLY' },
+              ]}
+            />
+          </Form.Item>
+          {repeatRule === 'NONE' && (
+            <Form.Item name="scheduledDate" label="安排日期（选填）">
+              <DatePicker className="cute-input" style={{ width: '100%' }} placeholder="选择具体日期" />
+            </Form.Item>
+          )}
+          {repeatRule === 'WEEKLY' && (
+            <Form.Item name="weeklyDays" label="选择星期">
+              <Checkbox.Group
+                options={[
+                  { label: '周一', value: 1 },
+                  { label: '周二', value: 2 },
+                  { label: '周三', value: 3 },
+                  { label: '周四', value: 4 },
+                  { label: '周五', value: 5 },
+                  { label: '周六', value: 6 },
+                  { label: '周日', value: 7 },
+                ]}
+              />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
 

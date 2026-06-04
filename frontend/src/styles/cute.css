@@ -183,8 +183,18 @@ input, textarea {
   line-height: 28px;
 }
 .cute-calendar .ant-picker-calendar-date-today {
-  border-color: #ff6b81 !important;
+  border-color: transparent !important;
   font-weight: 700;
+}
+.cute-calendar .ant-picker-calendar-date-today .ant-picker-calendar-date-value {
+  background: #ff6b81;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
 }
 .cute-calendar .ant-picker-calendar-date-content {
   height: 38px;
