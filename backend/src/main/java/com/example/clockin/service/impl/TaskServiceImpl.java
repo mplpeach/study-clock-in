@@ -4,6 +4,7 @@ import com.example.clockin.dto.TaskDTO;
 import com.example.clockin.entity.GoalTask;
 import com.example.clockin.entity.Task;
 import com.example.clockin.enums.RepeatRule;
+import com.example.clockin.enums.TaskStatus;
 import com.example.clockin.repository.GoalTaskRepository;
 import com.example.clockin.repository.TaskRepository;
 import com.example.clockin.service.TaskInstanceService;
@@ -171,6 +172,24 @@ public class TaskServiceImpl implements TaskService {
         return false;
     }
 
+    @Override
+    @Transactional
+    public void completeTask(Long taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new EntityNotFoundException("任务不存在"));
+        task.setStatus(TaskStatus.COMPLETED);
+        taskRepository.save(task);
+    }
+
+    @Override
+    @Transactional
+    public void reactivateTask(Long taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new EntityNotFoundException("任务不存在"));
+        task.setStatus(TaskStatus.ACTIVE);
+        taskRepository.save(task);
+    }
+
     private TaskDTO toDTO(Task task) {
         TaskDTO dto = new TaskDTO();
         dto.setId(task.getId());
@@ -179,6 +198,7 @@ public class TaskServiceImpl implements TaskService {
         dto.setRepeatRule(task.getRepeatRule() != null ? task.getRepeatRule().name() : null);
         dto.setWeeklyDays(task.getWeeklyDays());
         dto.setScheduledDate(task.getScheduledDate() != null ? task.getScheduledDate().toString() : null);
+        dto.setStatus(task.getStatus() != null ? task.getStatus().name() : TaskStatus.ACTIVE.name());
         java.util.List<Long> goalIds = goalTaskRepository.findByTaskId(task.getId())
                 .stream().map(GoalTask::getGoalId).collect(Collectors.toList());
         dto.setGoalIds(goalIds);

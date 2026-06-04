@@ -13,4 +13,6 @@ public interface TaskService {
     void bindTaskToGoal(Long taskId, Long goalId);
     void unbindTaskFromGoal(Long taskId, Long goalId);
     List<TaskDTO> getTasksByGoal(Long goalId);
+    void completeTask(Long taskId);
+    void reactivateTask(Long taskId);
 }

@@ -3,7 +3,9 @@ package com.example.clockin.service.impl;
 import com.example.clockin.dto.CheckInDTO;
 import com.example.clockin.entity.*;
 import com.example.clockin.enums.CheckInType;
+import com.example.clockin.enums.RepeatRule;
 import com.example.clockin.enums.TaskInstanceStatus;
+import com.example.clockin.enums.TaskStatus;
 import com.example.clockin.repository.*;
 import com.example.clockin.service.CheckInService;
 import com.example.clockin.service.FileStorageService;
@@ -89,6 +91,7 @@ public class CheckInServiceImpl implements CheckInService {
         if (request.isComplete()) {
             instance.setStatus(TaskInstanceStatus.COMPLETED);
             instanceRepository.save(instance);
+            autoCompleteTaskIfOneTime(instance.getTaskId());
         }
 
         if (images != null && !images.isEmpty()) {
@@ -106,6 +109,7 @@ public class CheckInServiceImpl implements CheckInService {
 
         instance.setStatus(TaskInstanceStatus.COMPLETED);
         instanceRepository.save(instance);
+        autoCompleteTaskIfOneTime(instance.getTaskId());
 
         CheckInRecord record = new CheckInRecord();
         record.setTaskInstanceId(instance.getId());
@@ -182,5 +186,22 @@ public class CheckInServiceImpl implements CheckInService {
         dto.setImageUrls(imageUrls);
 
         return dto;
+    }
+
+    private void autoCompleteTaskIfOneTime(Long taskId) {
+        Task task = taskRepository.findById(taskId).orElse(null);
+        if (task == null || task.getRepeatRule() == null || task.getRepeatRule() != RepeatRule.NONE) {
+            return;
+        }
+        List<TaskInstance> instances = instanceRepository.findByTaskId(taskId);
+        if (instances.isEmpty()) {
+            return;
+        }
+        boolean allCompleted = instances.stream()
+                .allMatch(i -> i.getStatus() == TaskInstanceStatus.COMPLETED);
+        if (allCompleted) {
+            task.setStatus(TaskStatus.COMPLETED);
+            taskRepository.save(task);
+        }
     }
 }

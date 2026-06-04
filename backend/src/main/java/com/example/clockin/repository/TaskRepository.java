@@ -1,6 +1,7 @@
 package com.example.clockin.repository;
 
 import com.example.clockin.enums.RepeatRule;
+import com.example.clockin.enums.TaskStatus;
 import com.example.clockin.entity.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,4 +18,6 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> searchByName(@Param("userId") Long userId, @Param("keyword") String keyword);
 
     List<Task> findByRepeatRuleNot(RepeatRule repeatRule);
+
+    List<Task> findByRepeatRuleNotAndStatus(RepeatRule repeatRule, TaskStatus status);
 }

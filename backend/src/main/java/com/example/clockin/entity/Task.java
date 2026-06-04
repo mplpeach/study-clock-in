@@ -1,6 +1,7 @@
 package com.example.clockin.entity;
 
 import com.example.clockin.enums.RepeatRule;
+import com.example.clockin.enums.TaskStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,4 +31,8 @@ public class Task extends BaseEntity {
 
     @Column(length = 20)
     private String weeklyDays;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TaskStatus status = TaskStatus.ACTIVE;
 }

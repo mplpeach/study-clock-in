@@ -68,4 +68,16 @@ public class TaskController {
     public ApiResponse<List<TaskDTO>> getByGoal(@PathVariable Long goalId) {
         return ApiResponse.success(taskService.getTasksByGoal(goalId));
     }
+
+    @PutMapping("/{id}/complete")
+    public ApiResponse<Void> complete(@PathVariable Long id) {
+        taskService.completeTask(id);
+        return ApiResponse.success();
+    }
+
+    @PutMapping("/{id}/reactivate")
+    public ApiResponse<Void> reactivate(@PathVariable Long id) {
+        taskService.reactivateTask(id);
+        return ApiResponse.success();
+    }
 }

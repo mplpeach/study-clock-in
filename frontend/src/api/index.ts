@@ -18,6 +18,7 @@ export interface Task {
   scheduledDate?: string;
   repeatRule?: string;
   weeklyDays?: string;
+  status?: string;
 }
 
 export const goalApi = {
@@ -44,6 +45,8 @@ export const taskApi = {
   unbindFromGoal: (taskId: number, goalId: number) =>
     client.post('/tasks/unbind', { taskId, goalId }),
   getByGoal: (goalId: number) => client.get<any, Task[]>(`/tasks/by-goal/${goalId}`),
+  complete: (id: number) => client.put(`/tasks/${id}/complete`),
+  reactivate: (id: number) => client.put(`/tasks/${id}/reactivate`),
 };
 
 export interface TaskInstance {

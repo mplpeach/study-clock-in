@@ -2,6 +2,7 @@ package com.example.clockin.scheduler;
 
 import com.example.clockin.entity.Task;
 import com.example.clockin.enums.RepeatRule;
+import com.example.clockin.enums.TaskStatus;
 import com.example.clockin.repository.TaskRepository;
 import com.example.clockin.service.TaskInstanceService;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ public class TaskInstanceScheduler {
         LocalDate today = LocalDate.now();
         log.info("开始自动创建 {} 的任务实例", today);
 
-        List<Task> tasks = taskRepository.findByRepeatRuleNot(RepeatRule.NONE);
+        List<Task> tasks = taskRepository.findByRepeatRuleNotAndStatus(RepeatRule.NONE, TaskStatus.ACTIVE);
         int created = 0;
 
         for (Task task : tasks) {

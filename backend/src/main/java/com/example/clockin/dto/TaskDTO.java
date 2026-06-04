@@ -13,6 +13,7 @@ public class TaskDTO {
     private String scheduledDate;
     private String repeatRule;
     private String weeklyDays;
+    private String status;
 
     @Data
     public static class CreateRequest {
