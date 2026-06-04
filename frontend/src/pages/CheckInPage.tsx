@@ -279,11 +279,13 @@ const CheckInPage: React.FC = () => {
     }
 
     const instance = await resolveInstance(taskId);
-    const duration = (values.durationHours || 0) * 60 + (values.durationMinutes || 0);
+    const startTime = values.timeRange?.[0];
+    const endTime = values.timeRange?.[1];
+    const durationMinutes = startTime && endTime ? endTime.diff(startTime, 'minute') : 0;
     await checkInApi.manual(instance.id, {
-      startTime: values.timeRange?.[0]?.format('YYYY-MM-DDTHH:mm:ss'),
-      endTime: values.timeRange?.[1]?.format('YYYY-MM-DDTHH:mm:ss'),
-      durationMinutes: duration,
+      startTime: startTime?.format('YYYY-MM-DDTHH:mm:ss'),
+      endTime: endTime?.format('YYYY-MM-DDTHH:mm:ss'),
+      durationMinutes,
       content: values.content,
       note: values.note,
     }, manualFiles.length > 0 ? manualFiles : undefined);
@@ -598,21 +600,99 @@ const CheckInPage: React.FC = () => {
             manualForm.resetFields();
           })}
 
-          <Form.Item name="timeRange" label="学习时间段">
-            <TimePicker.RangePicker format="HH:mm" style={{ width: '100%' }} className="cute-input" />
+          <Form.Item name="timeRange" label="学习时间段" style={{ marginBottom: 12 }}>
+            <TimePicker.RangePicker
+              format="HH:mm"
+              style={{ width: '100%' }}
+              className="cute-input"
+              changeOnBlur
+              needConfirm
+              disabledTime={(date, type) => {
+                if (type === 'end') {
+                  const now = dayjs();
+                  const currentHour = now.hour();
+                  const currentMinute = now.minute();
+                  if (!date || date.isSame(now, 'day')) {
+                    return {
+                      disabledHours: () => {
+                        const hours: number[] = [];
+                        for (let i = currentHour + 1; i < 24; i++) hours.push(i);
+                        return hours;
+                      },
+                      disabledMinutes: (selectedHour: number) => {
+                        if (selectedHour === currentHour) {
+                          const minutes: number[] = [];
+                          for (let i = currentMinute + 1; i < 60; i++) minutes.push(i);
+                          return minutes;
+                        }
+                        return [];
+                      },
+                    };
+                  }
+                }
+                return {};
+              }}
+              onChange={(value) => {
+                if (value?.[0] && value?.[1]) {
+                  const diff = value[1].diff(value[0], 'minute');
+                  manualForm.setFieldsValue({
+                    durationHours: Math.floor(diff / 60),
+                    durationMinutes: diff % 60,
+                  });
+                } else {
+                  manualForm.setFieldsValue({ durationHours: null, durationMinutes: null });
+                }
+              }}
+            />
           </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="durationHours" label="时长（小时）">
-                <Input type="number" min={0} placeholder="0" className="cute-input" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="durationMinutes" label="时长（分钟）">
-                <Input type="number" min={0} placeholder="0" className="cute-input" />
-              </Form.Item>
-            </Col>
-          </Row>
+
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, cur) => prev.timeRange !== cur.timeRange}
+          >
+            {({ getFieldValue }) => {
+              const range = getFieldValue('timeRange');
+              const minutes = range?.[0] && range?.[1]
+                ? range[1].diff(range[0], 'minute')
+                : null;
+              const display = minutes !== null
+                ? `${Math.floor(minutes / 60)}小时${minutes % 60}分钟`
+                : null;
+              return (
+                <Form.Item label="学习时长">
+                  {display !== null ? (
+                    <div style={{
+                      height: 38,
+                      lineHeight: '38px',
+                      padding: '0 12px',
+                      background: '#f5f5f5',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 12,
+                      color: '#5a3d4a',
+                      fontSize: 14,
+                      userSelect: 'none',
+                    }}>
+                      {display}
+                    </div>
+                  ) : (
+                    <div style={{
+                      height: 38,
+                      lineHeight: '38px',
+                      padding: '0 12px',
+                      background: '#f5f5f5',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 12,
+                      color: '#bfbfbf',
+                      fontSize: 14,
+                      userSelect: 'none',
+                    }}>
+                      请先选择学习时间段
+                    </div>
+                  )}
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
           <Form.Item name="content" label="📖 学了什么">
             <TextArea className="cute-input" rows={3} placeholder="描述今天的学习内容" />
           </Form.Item>
