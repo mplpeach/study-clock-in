@@ -115,44 +115,39 @@ const TasksPage: React.FC = () => {
       title: '任务名称',
       dataIndex: 'name',
       key: 'name',
-      width: 180,
+      width: 160,
       render: (name: string) => <strong style={{ color: '#5a3d4a' }}>{name}</strong>,
     },
     {
       title: '描述',
       dataIndex: 'description',
       key: 'description',
-      width: 160,
+      width: 140,
       ellipsis: true,
     },
     {
-      title: '重复',
-      dataIndex: 'repeatRule',
-      key: 'repeatRule',
-      width: 130,
-      render: (rule: string, record: Task) => {
-        const labelMap: Record<string, string> = { NONE: '不重复', DAILY: '每天', WEEKLY: '每周' };
+      title: '安排',
+      key: 'schedule',
+      width: 120,
+      render: (_: unknown, record: Task) => {
         const dayNames = ['', '一', '二', '三', '四', '五', '六', '日'];
-        const label = labelMap[rule] || '不重复';
-        if (rule === 'WEEKLY' && record.weeklyDays) {
-          const days = record.weeklyDays.split(',').map((d) => dayNames[Number(d)]).join(',');
-          return <Tag className="cute-tag" color="#a29bfe">{label} ({days})</Tag>;
+        if (record.repeatRule === 'DAILY') {
+          return <Tag className="cute-tag" color="#4ecdc4">每天</Tag>;
         }
-        if (!rule || rule === 'NONE') return <Tag className="cute-tag">不重复</Tag>;
-        return <Tag className="cute-tag" color="#4ecdc4">{label}</Tag>;
+        if (record.repeatRule === 'WEEKLY' && record.weeklyDays) {
+          const days = record.weeklyDays.split(',').map((d) => dayNames[Number(d)]).join('、');
+          return <Tag className="cute-tag" color="#a29bfe">每周{days}</Tag>;
+        }
+        if (record.scheduledDate) {
+          return <span>{dayjs(record.scheduledDate).format('M月D日')}</span>;
+        }
+        return <span style={{ color: '#bbb' }}>未安排</span>;
       },
-    },
-    {
-      title: '安排日期',
-      dataIndex: 'scheduledDate',
-      key: 'scheduledDate',
-      width: 110,
-      render: (d: string) => d || '-',
     },
     {
       title: '关联目标',
       key: 'goals',
-      width: 200,
+      width: 180,
       render: (_: unknown, record: Task) => {
         const ids = record.goalIds || (record.goalId ? [record.goalId] : []);
         if (ids.length === 0) return <Tag className="cute-tag">未关联</Tag>;
@@ -171,7 +166,7 @@ const TasksPage: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 320,
+      width: 280,
       render: (_: unknown, record: Task) => (
         <Space>
           <Button type="link" style={{ color: '#a29bfe' }} icon={<LinkOutlined />} size="small"
@@ -215,7 +210,6 @@ const TasksPage: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={false}
-          scroll={{ x: 1100 }}
           className="cute-table"
         />
       </Card>
