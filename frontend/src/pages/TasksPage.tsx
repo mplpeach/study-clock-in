@@ -308,7 +308,7 @@ const TasksPage: React.FC = () => {
               columns={innerColumns}
               rowKey="id"
               loading={loading}
-              pagination={{ pageSize: 5, size: 'small', showSizeChanger: false }}
+              pagination={{ pageSize: 10, size: 'small', showSizeChanger: false }}
               size="small"
             />
           </Panel>

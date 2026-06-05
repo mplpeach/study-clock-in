@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Card, Button, Modal, Form, Input, Select, TimePicker, message, Row, Col,
   Tag, Empty, Upload, List, Space, Typography, Popconfirm,
@@ -70,6 +70,12 @@ const CheckInPage: React.FC = () => {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const statusOrder: Record<string, number> = { IN_PROGRESS: 0, TODO: 1, COMPLETED: 2 };
+  const sortedInstances = useMemo(
+    () => [...todayInstances].sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9)),
+    [todayInstances]
+  );
 
   const timerDisplay = accumulatedElapsed + elapsed;
 
@@ -463,7 +469,7 @@ const CheckInPage: React.FC = () => {
           <Empty description="今天还没有任务，点击上方按钮开始学习吧~ 🌸" />
         ) : (
           <List
-            dataSource={todayInstances}
+            dataSource={sortedInstances}
             renderItem={(item) => (
               <List.Item className="log-row"
                 actions={
