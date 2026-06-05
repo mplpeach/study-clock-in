@@ -404,3 +404,19 @@ input, textarea {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* ============ 低调操作按钮（延期/跳过） ============ */
+.subtle-action {
+  border: 1px solid #e8dce0 !important;
+  color: #c4b5bc !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  border-radius: 12px !important;
+  opacity: 0.5;
+  transition: all 0.25s ease;
+}
+.subtle-action:hover {
+  border-color: #d4bcc4 !important;
+  color: #8c6f7a !important;
+  opacity: 1;
+}
