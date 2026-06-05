@@ -2,6 +2,7 @@ package com.example.clockin.service.impl;
 
 import com.example.clockin.dto.TaskInstanceDTO;
 import com.example.clockin.entity.*;
+import com.example.clockin.enums.ActionType;
 import com.example.clockin.enums.TaskInstanceStatus;
 import com.example.clockin.repository.*;
 import com.example.clockin.service.TaskInstanceService;
@@ -22,19 +23,22 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
     private final GoalRepository goalRepository;
     private final CheckInRecordRepository checkInRecordRepository;
     private final CheckInImageRepository checkInImageRepository;
+    private final TaskInstanceActionRepository actionRepository;
 
     public TaskInstanceServiceImpl(TaskInstanceRepository instanceRepository,
                                    TaskRepository taskRepository,
                                    GoalTaskRepository goalTaskRepository,
                                    GoalRepository goalRepository,
                                    CheckInRecordRepository checkInRecordRepository,
-                                   CheckInImageRepository checkInImageRepository) {
+                                   CheckInImageRepository checkInImageRepository,
+                                   TaskInstanceActionRepository actionRepository) {
         this.instanceRepository = instanceRepository;
         this.taskRepository = taskRepository;
         this.goalTaskRepository = goalTaskRepository;
         this.goalRepository = goalRepository;
         this.checkInRecordRepository = checkInRecordRepository;
         this.checkInImageRepository = checkInImageRepository;
+        this.actionRepository = actionRepository;
     }
 
     @Override
@@ -117,12 +121,71 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
         instanceRepository.deleteAll(instances);
     }
 
+    @Override
+    @Transactional
+    public TaskInstanceDTO deferInstance(Long instanceId) {
+        TaskInstance instance = instanceRepository.findById(instanceId)
+                .orElseThrow(() -> new EntityNotFoundException("任务实例不存在"));
+        Task task = taskRepository.findById(instance.getTaskId())
+                .orElseThrow(() -> new EntityNotFoundException("关联任务不存在"));
+
+        if (task.getRepeatRule() != null && task.getRepeatRule() != com.example.clockin.enums.RepeatRule.NONE) {
+            throw new IllegalArgumentException("循环任务不支持延期，请使用跳过功能");
+        }
+        if (instance.getDeferCount() >= 3) {
+            throw new IllegalArgumentException("该任务已达到最大延期次数（3次）");
+        }
+
+        LocalDate originalDate = instance.getScheduledDate();
+        instance.setScheduledDate(originalDate.plusDays(1));
+        instance.setDeferCount(instance.getDeferCount() + 1);
+        instanceRepository.save(instance);
+
+        TaskInstanceAction action = new TaskInstanceAction();
+        action.setTaskInstanceId(instanceId);
+        action.setTaskId(instance.getTaskId());
+        action.setUserId(instance.getUserId());
+        action.setActionType(ActionType.DEFER);
+        action.setOriginalDate(originalDate);
+        action.setNewDate(instance.getScheduledDate());
+        actionRepository.save(action);
+
+        return toDTO(instance);
+    }
+
+    @Override
+    @Transactional
+    public TaskInstanceDTO skipInstance(Long instanceId) {
+        TaskInstance instance = instanceRepository.findById(instanceId)
+                .orElseThrow(() -> new EntityNotFoundException("任务实例不存在"));
+        Task task = taskRepository.findById(instance.getTaskId())
+                .orElseThrow(() -> new EntityNotFoundException("关联任务不存在"));
+
+        if (task.getRepeatRule() == null || task.getRepeatRule() == com.example.clockin.enums.RepeatRule.NONE) {
+            throw new IllegalArgumentException("单次任务不支持跳过，请使用延期功能");
+        }
+
+        instance.setStatus(TaskInstanceStatus.SKIPPED);
+        instanceRepository.save(instance);
+
+        TaskInstanceAction action = new TaskInstanceAction();
+        action.setTaskInstanceId(instanceId);
+        action.setTaskId(instance.getTaskId());
+        action.setUserId(instance.getUserId());
+        action.setActionType(ActionType.SKIP);
+        action.setOriginalDate(instance.getScheduledDate());
+        actionRepository.save(action);
+
+        return toDTO(instance);
+    }
+
     private TaskInstanceDTO toDTO(TaskInstance instance) {
         TaskInstanceDTO dto = new TaskInstanceDTO();
         dto.setId(instance.getId());
         dto.setTaskId(instance.getTaskId());
         dto.setScheduledDate(instance.getScheduledDate());
         dto.setStatus(instance.getStatus());
+        dto.setDeferCount(instance.getDeferCount());
 
         Task task = taskRepository.findById(instance.getTaskId()).orElse(null);
         if (task != null) {

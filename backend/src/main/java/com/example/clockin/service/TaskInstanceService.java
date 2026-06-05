@@ -13,4 +13,6 @@ public interface TaskInstanceService {
     List<TaskInstanceDTO> getOverdueInstances(Long userId);
     void deleteInstance(Long instanceId);
     void deleteInstancesByTaskId(Long taskId);
+    TaskInstanceDTO deferInstance(Long instanceId);
+    TaskInstanceDTO skipInstance(Long instanceId);
 }

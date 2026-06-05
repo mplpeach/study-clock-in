@@ -18,6 +18,7 @@ public class TaskInstanceDTO {
     private String taskScheduledDate;
     private LocalDate scheduledDate;
     private TaskInstanceStatus status;
+    private Integer deferCount;
 
     @Data
     public static class CreateRequest {

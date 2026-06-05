@@ -52,6 +52,16 @@ public class TaskInstanceController {
         return ApiResponse.success(instanceService.getOverdueInstances(DEFAULT_USER_ID));
     }
 
+    @PutMapping("/{id}/defer")
+    public ApiResponse<TaskInstanceDTO> defer(@PathVariable Long id) {
+        return ApiResponse.success(instanceService.deferInstance(id));
+    }
+
+    @PutMapping("/{id}/skip")
+    public ApiResponse<TaskInstanceDTO> skip(@PathVariable Long id) {
+        return ApiResponse.success(instanceService.skipInstance(id));
+    }
+
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         instanceService.deleteInstance(id);

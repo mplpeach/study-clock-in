@@ -722,6 +722,47 @@ const CheckInPage: React.FC = () => {
                                     已完成 ✓
                                   </Tag>,
                                 ]),
+                              ...(item.status !== 'COMPLETED' && item.repeatRule === 'NONE'
+                                ? [
+                                  <Button
+                                    className="cute-btn"
+                                    size="small"
+                                    disabled={activeRecordId !== null || (item.deferCount ?? 0) >= 3}
+                                    title={(item.deferCount ?? 0) >= 3 ? '已达到最大延期次数（3次）' : '延至明天'}
+                                    key="defer"
+                                    style={{ borderColor: '#ffa502', color: '#ffa502' }}
+                                    onClick={async () => {
+                                      try {
+                                        await instanceApi.defer(item.id);
+                                        message.success('已延期至明天');
+                                        fetchData();
+                                      } catch (e: any) { message.error(e?.message || '延期失败'); }
+                                    }}
+                                  >
+                                    延期{(item.deferCount ?? 0) > 0 ? ` (${item.deferCount}/3)` : ''}
+                                  </Button>,
+                                ]
+                                : []),
+                              ...(item.status !== 'COMPLETED' && item.repeatRule && item.repeatRule !== 'NONE'
+                                ? [
+                                  <Button
+                                    className="cute-btn"
+                                    size="small"
+                                    disabled={activeRecordId !== null}
+                                    key="skip"
+                                    style={{ borderColor: '#b8929e', color: '#b8929e' }}
+                                    onClick={async () => {
+                                      try {
+                                        await instanceApi.skip(item.id);
+                                        message.success('已跳过该任务');
+                                        fetchData();
+                                      } catch (e: any) { message.error(e?.message || '跳过失败'); }
+                                    }}
+                                  >
+                                    跳过
+                                  </Button>,
+                                ]
+                                : []),
                               <Button
                                 type="link"
                                 danger

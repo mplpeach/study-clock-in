@@ -28,4 +28,7 @@ public class TaskInstance extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TaskInstanceStatus status = TaskInstanceStatus.TODO;
+
+    @Column(nullable = false)
+    private Integer deferCount = 0;
 }

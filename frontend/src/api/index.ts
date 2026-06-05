@@ -63,7 +63,8 @@ export interface TaskInstance {
   repeatRule?: string;
   taskScheduledDate?: string;
   scheduledDate: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
+  status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED';
+  deferCount?: number;
 }
 
 export const instanceApi = {
@@ -76,6 +77,8 @@ export const instanceApi = {
   getCalendar: (year: number, month: number) =>
     client.get<any, Record<string, TaskInstance[]>>('/instances/calendar', { params: { year, month } }),
   getOverdue: () => client.get<any, TaskInstance[]>('/instances/overdue'),
+  defer: (id: number) => client.put<any, TaskInstance>(`/instances/${id}/defer`),
+  skip: (id: number) => client.put<any, TaskInstance>(`/instances/${id}/skip`),
   delete: (id: number) => client.delete(`/instances/${id}`),
 };
 
