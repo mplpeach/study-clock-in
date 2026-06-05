@@ -166,6 +166,46 @@ input, textarea {
   border-bottom: none;
 }
 
+/* ============ 打卡页目标分组卡片 ============ */
+.goal-block-card {
+  border-radius: 16px !important;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(255, 107, 129, 0.08);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.goal-block-card:hover {
+  box-shadow: 0 12px 32px rgba(255, 107, 129, 0.15);
+}
+
+.goal-block-card .ant-card-head {
+  border-bottom: 1px solid #fef0f3;
+  min-height: auto;
+}
+
+.goal-block-card .ant-card-head-title {
+  padding: 8px 0;
+}
+
+.goal-block-card .ant-card-body {
+  padding-top: 12px;
+}
+
+.goal-color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.goal-section-title {
+  font-size: 12px;
+  color: #b8929e;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
 /* ============ 打卡日历 ============ */
 .cute-calendar {
   width: 100%;

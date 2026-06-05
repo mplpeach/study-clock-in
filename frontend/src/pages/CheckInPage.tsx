@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Card, Button, Modal, Form, Input, Select, TimePicker, message, Row, Col,
-  Tag, Empty, Upload, List, Space, Typography,
+  Tag, Empty, Upload, List, Space, Typography, Divider,
 } from 'antd';
 import {
   PlayCircleOutlined, PauseCircleOutlined,
@@ -21,6 +21,15 @@ const emojiMap: Record<string, string> = {
   IN_PROGRESS: '⏳',
   COMPLETED: '✅',
 };
+
+interface GoalGroup {
+  goalId: number | null;
+  goalName: string;
+  color: string;
+  sortOrder: number;
+  todayItems: TaskInstance[];
+  overdueItems: TaskInstance[];
+}
 
 const CheckInPage: React.FC = () => {
   const [todayInstances, setTodayInstances] = useState<TaskInstance[]>([]);
@@ -74,10 +83,68 @@ const CheckInPage: React.FC = () => {
   useEffect(() => { fetchData(); }, []);
 
   const statusOrder: Record<string, number> = { IN_PROGRESS: 0, TODO: 1, COMPLETED: 2 };
-  const sortedInstances = useMemo(
-    () => [...todayInstances].sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9)),
-    [todayInstances]
-  );
+
+  const groupedGoals = useMemo(() => {
+    const map = new Map<number | null, GoalGroup>();
+
+    for (const g of goals) {
+      map.set(g.id, {
+        goalId: g.id,
+        goalName: g.name,
+        color: g.color,
+        sortOrder: g.sortOrder,
+        todayItems: [],
+        overdueItems: [],
+      });
+    }
+
+    map.set(null, {
+      goalId: null,
+      goalName: '未分类',
+      color: '#b8929e',
+      sortOrder: 99999,
+      todayItems: [],
+      overdueItems: [],
+    });
+
+    const sortByStatus = (a: TaskInstance, b: TaskInstance) =>
+      (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
+
+    for (const item of todayInstances) {
+      const task = tasks.find((t) => t.id === item.taskId);
+      const goalIds = task?.goalIds;
+      if (goalIds && goalIds.length > 0) {
+        for (const gid of goalIds) {
+          const group = map.get(gid);
+          if (group) group.todayItems.push(item);
+        }
+      } else {
+        map.get(null)!.todayItems.push(item);
+      }
+    }
+
+    for (const item of overdueInstances) {
+      const task = tasks.find((t) => t.id === item.taskId);
+      const goalIds = task?.goalIds;
+      if (goalIds && goalIds.length > 0) {
+        for (const gid of goalIds) {
+          const group = map.get(gid);
+          if (group) group.overdueItems.push(item);
+        }
+      } else {
+        map.get(null)!.overdueItems.push(item);
+      }
+    }
+
+    for (const group of map.values()) {
+      group.todayItems.sort(sortByStatus);
+      group.overdueItems.sort(sortByStatus);
+    }
+
+    return Array.from(map.values())
+      .filter((g) => g.todayItems.length > 0 || g.overdueItems.length > 0)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [goals, tasks, todayInstances, overdueInstances]);
 
   const timerDisplay = accumulatedElapsed + elapsed;
 
@@ -472,154 +539,258 @@ const CheckInPage: React.FC = () => {
         </Col>
       </Row>
 
-      {overdueInstances.length > 0 && (
-        <Card className="cute-card" title={<span style={{ color: '#ff4757' }}>⚠️ 逾期未完成</span>}
-          style={{ marginBottom: 16, borderColor: '#ff4757' }}>
-          <List
-            size="small"
-            dataSource={overdueInstances}
-            renderItem={(item) => (
-              <List.Item className="log-row"
-                actions={[
-                  <Button className="cute-btn" type="primary" size="small"
-                    style={{ background: '#ff6b81', borderColor: '#ff6b81' }}
-                    onClick={() => openStartModal()}>
-                    开始补
-                  </Button>,
-                ]}
-              >
-                <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
-                <Text delete style={{ color: '#8c6f7a' }}>{item.taskName}</Text>
-                {(() => {
-                  const pt = tasks.find((t) => t.id === item.taskId);
-                  if (pt && pt.repeatRule === 'NONE' && pt.scheduledDate && pt.scheduledDate > today) {
-                    const daysLeft = dayjs(pt.scheduledDate).diff(dayjs(today), 'day');
-                    return (
-                      <Tag className="cute-tag" color="orange" style={{ fontSize: 11, marginLeft: 4 }}>
-                        提前开始 · 原定{dayjs(pt.scheduledDate).format('M月D日')} · 还剩{daysLeft}天
-                      </Tag>
-                    );
-                  }
-                  return null;
-                })()}
-                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12, color: '#b8929e' }}>
-                  {item.scheduledDate}
+      {groupedGoals.length === 0 ? (
+        <Empty description="今天还没有任务，点击上方按钮开始学习吧~ 🌸" />
+      ) : (
+        groupedGoals.map((group) => (
+          <Card
+            key={group.goalId ?? 'unclassified'}
+            className="goal-block-card"
+            style={{ borderLeft: `4px solid ${group.color}` }}
+            title={
+              <Space>
+                <span className="goal-color-dot" style={{ background: group.color }} />
+                <Text strong style={{ color: '#5a3d4a', fontSize: 16 }}>
+                  {group.goalName}
                 </Text>
-              </List.Item>
-            )}
-          />
-        </Card>
-      )}
-
-      <Card className="cute-card" title="📋 今日任务">
-        {todayInstances.length === 0 ? (
-          <Empty description="今天还没有任务，点击上方按钮开始学习吧~ 🌸" />
-        ) : (
-          <List
-            dataSource={sortedInstances}
-            renderItem={(item) => (
-              <List.Item className="log-row"
-                actions={
-                  isActiveInstance(item.id)
-                    ? []
-                    : [
-                        ...(item.status === 'TODO'
-                          ? [
-                            <Button
-                              className="cute-btn"
-                              type="primary"
-                              icon={<PlayCircleOutlined />}
-                              disabled={activeRecordId !== null}
-                              key="start"
-                              onClick={() => doStartInstance(item.id)}
-                            >
-                              开始学习
-                            </Button>,
-                          ]
-                          : item.status === 'IN_PROGRESS'
-                          ? [
-                            <Button
-                              className="cute-btn"
-                              type="primary"
-                              icon={<PlayCircleOutlined />}
-                              disabled={activeRecordId !== null}
-                              key="resume"
-                              onClick={() => handleResume(item.id)}
-                              style={activeRecordId !== null ? undefined : { background: '#ffa502', borderColor: '#ffa502' }}
-                            >
-                              继续学习
-                            </Button>,
-                          ]
+                <Tag className="cute-tag" style={{ fontSize: 11 }}>
+                  {group.todayItems.length + group.overdueItems.length} 项
+                </Tag>
+              </Space>
+            }
+          >
+            {group.overdueItems.length > 0 && (
+              <>
+                <div className="goal-section-title">⚠️ 逾期未完成</div>
+                <List
+                  size="small"
+                  dataSource={group.overdueItems}
+                  renderItem={(item) => (
+                    <List.Item className="log-row"
+                      actions={
+                        isActiveInstance(item.id)
+                          ? []
                           : [
-                            <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
-                              已完成 ✓
-                            </Tag>,
-                          ]),
-                        <Button
-                          type="link"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          key="delete"
-                          onClick={() => {
-                            Modal.confirm({
-                              icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
-                              title: '确定删除这条任务吗？',
-                              className: 'cute-modal',
-                              centered: true,
-                              okText: '确定',
-                              cancelText: '取消',
-                              okButtonProps: {
-                                danger: true,
-                                style: { borderRadius: 20 },
-                              },
-                              cancelButtonProps: {
-                                style: { borderRadius: 20 },
-                              },
-                              onOk: () => handleDeleteInstance(item.id),
-                            });
-                          }}
-                        />,
-                      ]
-                }
-              >
-                <List.Item.Meta
-                  avatar={
-                    <span style={{ fontSize: 20 }}>{isActiveInstance(item.id) ? '⏳' : emojiMap[item.status] || '📝'}</span>
-                  }
-                  title={
-                    <Space>
-                      <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{item.taskName}</span>
-                      {item.goalName && <Tag className="cute-tag" color="#a29bfe" style={{ fontSize: 11 }}>{item.goalName}</Tag>}
-                      {(() => {
-                        const pt = tasks.find((t) => t.id === item.taskId);
-                        if (pt && pt.repeatRule === 'NONE' && pt.scheduledDate && pt.scheduledDate > today) {
-                          const daysLeft = dayjs(pt.scheduledDate).diff(dayjs(today), 'day');
-                          return (
-                            <Tag className="cute-tag" color="orange" style={{ fontSize: 11 }}>
-                              提前开始 · 原定{dayjs(pt.scheduledDate).format('M月D日')} · 还剩{daysLeft}天
-                            </Tag>
-                          );
+                              ...(item.status !== 'COMPLETED'
+                                ? [
+                                  <Button
+                                    className="cute-btn"
+                                    type="primary"
+                                    size="small"
+                                    disabled={activeRecordId !== null}
+                                    key="start"
+                                    onClick={() =>
+                                      item.status === 'IN_PROGRESS'
+                                        ? handleResume(item.id)
+                                        : doStartInstance(item.id)
+                                    }
+                                  >
+                                    {item.status === 'IN_PROGRESS' ? '继续学习' : '开始学习'}
+                                  </Button>,
+                                ]
+                                : [
+                                  <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
+                                    已完成 ✓
+                                  </Tag>,
+                                ]),
+                              <Button
+                                type="link"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                key="delete"
+                                onClick={() => {
+                                  Modal.confirm({
+                                    icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                                    title: '确定删除这条任务吗？',
+                                    className: 'cute-modal',
+                                    centered: true,
+                                    okText: '确定',
+                                    cancelText: '取消',
+                                    okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                                    cancelButtonProps: { style: { borderRadius: 20 } },
+                                    onOk: () => handleDeleteInstance(item.id),
+                                  });
+                                }}
+                              />,
+                            ]
+                      }
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          <span style={{ fontSize: 20 }}>
+                            {isActiveInstance(item.id) ? '⏳' : emojiMap[item.status] || '📝'}
+                          </span>
                         }
-                        return null;
-                      })()}
-                    </Space>
-                  }
-                  description={
-                    <span style={{ color: getStatusColor(item.status) }}>
-                      {isActiveInstance(item.id)
-                        ? `进行中 ${formatElapsed(timerDisplay)}`
-                        : item.status === 'TODO' ? '待开始'
-                        : item.status === 'IN_PROGRESS' ? '进行中'
-                        : '已完成'}
-                    </span>
-                  }
+                        title={
+                          <Space>
+                            <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
+                            <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{item.taskName}</span>
+                            {(() => {
+                              const pt = tasks.find((t) => t.id === item.taskId);
+                              if (pt && pt.repeatRule === 'NONE' && pt.scheduledDate && pt.scheduledDate > today) {
+                                const daysLeft = dayjs(pt.scheduledDate).diff(dayjs(today), 'day');
+                                return (
+                                  <Tag className="cute-tag" color="orange" style={{ fontSize: 11 }}>
+                                    提前开始 · 原定{dayjs(pt.scheduledDate).format('M月D日')} · 还剩{daysLeft}天
+                                  </Tag>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {(() => {
+                              const pt = tasks.find((t) => t.id === item.taskId);
+                              if (pt?.goalIds && pt.goalIds.length > 1) {
+                                return (
+                                  <Tag className="cute-tag" color="processing" style={{ fontSize: 10 }}>
+                                    {pt.goalIds.length} 个目标
+                                  </Tag>
+                                );
+                              }
+                              return null;
+                            })()}
+                            <Text type="secondary" style={{ fontSize: 12, color: '#b8929e' }}>
+                              {item.scheduledDate}
+                            </Text>
+                          </Space>
+                        }
+                        description={
+                          <span style={{ color: getStatusColor(item.status) }}>
+                            {isActiveInstance(item.id)
+                              ? `进行中 ${formatElapsed(timerDisplay)}`
+                              : item.status === 'TODO' ? '待补做'
+                              : item.status === 'IN_PROGRESS' ? '进行中'
+                              : '已完成'}
+                          </span>
+                        }
+                      />
+                    </List.Item>
+                  )}
                 />
-              </List.Item>
+              </>
             )}
-          />
-        )}
-      </Card>
+
+            {group.todayItems.length > 0 && (
+              <>
+                {group.overdueItems.length > 0 && (
+                  <Divider style={{ margin: '12px 0', borderColor: '#ffe0e6' }} />
+                )}
+                <List
+                  size="small"
+                  dataSource={group.todayItems}
+                  renderItem={(item) => (
+                    <List.Item className="log-row"
+                      actions={
+                        isActiveInstance(item.id)
+                          ? []
+                          : [
+                              ...(item.status === 'TODO'
+                                ? [
+                                  <Button
+                                    className="cute-btn"
+                                    type="primary"
+                                    icon={<PlayCircleOutlined />}
+                                    disabled={activeRecordId !== null}
+                                    key="start"
+                                    onClick={() => doStartInstance(item.id)}
+                                  >
+                                    开始学习
+                                  </Button>,
+                                ]
+                                : item.status === 'IN_PROGRESS'
+                                ? [
+                                  <Button
+                                    className="cute-btn"
+                                    type="primary"
+                                    icon={<PlayCircleOutlined />}
+                                    disabled={activeRecordId !== null}
+                                    key="resume"
+                                    onClick={() => handleResume(item.id)}
+                                    style={activeRecordId !== null ? undefined : { background: '#ffa502', borderColor: '#ffa502' }}
+                                  >
+                                    继续学习
+                                  </Button>,
+                                ]
+                                : [
+                                  <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
+                                    已完成 ✓
+                                  </Tag>,
+                                ]),
+                              <Button
+                                type="link"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                key="delete"
+                                onClick={() => {
+                                  Modal.confirm({
+                                    icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                                    title: '确定删除这条任务吗？',
+                                    className: 'cute-modal',
+                                    centered: true,
+                                    okText: '确定',
+                                    cancelText: '取消',
+                                    okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                                    cancelButtonProps: { style: { borderRadius: 20 } },
+                                    onOk: () => handleDeleteInstance(item.id),
+                                  });
+                                }}
+                              />,
+                            ]
+                      }
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          <span style={{ fontSize: 20 }}>
+                            {isActiveInstance(item.id) ? '⏳' : emojiMap[item.status] || '📝'}
+                          </span>
+                        }
+                        title={
+                          <Space>
+                            <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{item.taskName}</span>
+                            {(() => {
+                              const pt = tasks.find((t) => t.id === item.taskId);
+                              if (pt && pt.repeatRule === 'NONE' && pt.scheduledDate && pt.scheduledDate > today) {
+                                const daysLeft = dayjs(pt.scheduledDate).diff(dayjs(today), 'day');
+                                return (
+                                  <Tag className="cute-tag" color="orange" style={{ fontSize: 11 }}>
+                                    提前开始 · 原定{dayjs(pt.scheduledDate).format('M月D日')} · 还剩{daysLeft}天
+                                  </Tag>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {(() => {
+                              const pt = tasks.find((t) => t.id === item.taskId);
+                              if (pt?.goalIds && pt.goalIds.length > 1) {
+                                return (
+                                  <Tag className="cute-tag" color="processing" style={{ fontSize: 10 }}>
+                                    {pt.goalIds.length} 个目标
+                                  </Tag>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </Space>
+                        }
+                        description={
+                          <span style={{ color: getStatusColor(item.status) }}>
+                            {isActiveInstance(item.id)
+                              ? `进行中 ${formatElapsed(timerDisplay)}`
+                              : item.status === 'TODO' ? '待开始'
+                              : item.status === 'IN_PROGRESS' ? '进行中'
+                              : '已完成'}
+                          </span>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              </>
+            )}
+          </Card>
+        ))
+      )}
 
       {/* ===== 开始学习 Modal ===== */}
       <Modal className="cute-modal" title="▶️ 开始学习" open={startModalOpen}
