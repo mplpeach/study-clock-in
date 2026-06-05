@@ -495,8 +495,10 @@ const CheckInPage: React.FC = () => {
                               className="cute-btn"
                               type="primary"
                               icon={<PlayCircleOutlined />}
+                              disabled={activeRecordId !== null}
                               key="resume"
                               onClick={() => handleResume(item.id)}
+                              style={activeRecordId !== null ? undefined : { background: '#ffa502', borderColor: '#ffa502' }}
                             >
                               继续学习
                             </Button>,

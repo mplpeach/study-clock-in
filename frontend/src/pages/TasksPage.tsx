@@ -3,7 +3,7 @@ import {
   Card, Button, Modal, Form, Input, Select, DatePicker, Checkbox, Table, Tag, Popconfirm, message, Space,
   Tabs, Collapse, Empty,
 } from 'antd';
-import { PlusOutlined, LinkOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { taskApi, goalApi } from '../api';
 import type { Task, Goal } from '../api';
@@ -25,13 +25,10 @@ const TasksPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [bindModalOpen, setBindModalOpen] = useState(false);
-  const [bindTaskId, setBindTaskId] = useState<number | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [repeatRule, setRepeatRule] = useState<string>('NONE');
   const [activeTab, setActiveTab] = useState<string>('all');
   const [form] = Form.useForm();
-  const [bindForm] = Form.useForm();
   const [searchParams] = useSearchParams();
   const goalIdFilter = searchParams.get('goalId');
 
@@ -82,6 +79,7 @@ const TasksPage: React.FC = () => {
       scheduledDate: task.scheduledDate ? dayjs(task.scheduledDate) : undefined,
       repeatRule: task.repeatRule || 'NONE',
       weeklyDays: task.weeklyDays ? task.weeklyDays.split(',').map(Number) : [],
+      goalId: task.goalIds?.[0] || task.goalId || undefined,
     });
     setModalOpen(true);
   };
@@ -99,9 +97,20 @@ const TasksPage: React.FC = () => {
     };
     if (editingTask) {
       await taskApi.update(editingTask.id, payload);
+      const oldGoalId = editingTask.goalIds?.[0] || editingTask.goalId;
+      const newGoalId: number | undefined = values.goalId;
+      if (oldGoalId && oldGoalId !== newGoalId) {
+        await taskApi.unbindFromGoal(editingTask.id, oldGoalId);
+      }
+      if (newGoalId && newGoalId !== oldGoalId) {
+        await taskApi.bindToGoal(editingTask.id, newGoalId);
+      }
       message.success('任务已更新 ✨');
     } else {
-      await taskApi.create(payload);
+      const created = await taskApi.create(payload);
+      if (values.goalId) {
+        await taskApi.bindToGoal(created.id, values.goalId);
+      }
       message.success('任务已创建 ✨');
     }
     setModalOpen(false);
@@ -111,14 +120,6 @@ const TasksPage: React.FC = () => {
   const handleDelete = async (id: number) => {
     await taskApi.delete(id);
     message.success('任务已删除');
-    fetchTasks();
-  };
-
-  const handleBind = async () => {
-    const values = await bindForm.validateFields();
-    await taskApi.bindToGoal(bindTaskId!, values.goalId);
-    message.success('已关联到目标 💕');
-    setBindModalOpen(false);
     fetchTasks();
   };
 
@@ -251,10 +252,6 @@ const TasksPage: React.FC = () => {
             </>
           ) : (
             <>
-              <Button type="link" style={{ color: '#a29bfe' }} icon={<LinkOutlined />} size="small"
-                onClick={() => { setBindTaskId(record.id); bindForm.resetFields(); setBindModalOpen(true); }}>
-                关联
-              </Button>
               <Button type="link" style={{ color: '#8c6f7a' }} icon={<EditOutlined />} size="small" onClick={() => openEdit(record)}>编辑</Button>
               {isRecurring(record) ? (
                 <Popconfirm title="确定停止该循环任务吗？停止后不会再生成新实例" onConfirm={() => handleComplete(record.id)}>
@@ -364,6 +361,13 @@ const TasksPage: React.FC = () => {
           <Form.Item name="description" label="描述">
             <Input.TextArea className="cute-input" rows={3} />
           </Form.Item>
+          <Form.Item name="goalId" label="关联目标">
+            <Select className="cute-input" placeholder="选择关联的目标（选填）" allowClear>
+              {goals.map((g) => (
+                <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
           <Form.Item name="repeatRule" label="重复规则" initialValue="NONE">
             <Select
               className="cute-input"
@@ -398,18 +402,6 @@ const TasksPage: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 关联目标 Modal */}
-      <Modal className="cute-modal" title="关联到目标" open={bindModalOpen} onOk={handleBind} onCancel={() => setBindModalOpen(false)}>
-        <Form form={bindForm} layout="vertical">
-          <Form.Item name="goalId" label="选择目标" rules={[{ required: true, message: '请选择目标' }]}>
-            <Select className="cute-input" placeholder="请选择目标">
-              {goals.map((g) => (
-                <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 };
