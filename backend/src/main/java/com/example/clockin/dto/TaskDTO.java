@@ -32,6 +32,11 @@ public class TaskDTO {
     }
 
     @Data
+    public static class UpdateGoalsRequest {
+        private java.util.List<Long> goalIds;
+    }
+
+    @Data
     public static class SearchRequest {
         private String keyword;
     }

@@ -45,6 +45,8 @@ export const taskApi = {
   unbindFromGoal: (taskId: number, goalId: number) =>
     client.post('/tasks/unbind', { taskId, goalId }),
   getByGoal: (goalId: number) => client.get<any, Task[]>(`/tasks/by-goal/${goalId}`),
+  updateGoals: (taskId: number, goalIds: number[]) =>
+    client.put(`/tasks/${taskId}/goals`, { goalIds }),
   complete: (id: number) => client.put(`/tasks/${id}/complete`),
   reactivate: (id: number) => client.put(`/tasks/${id}/reactivate`),
 };

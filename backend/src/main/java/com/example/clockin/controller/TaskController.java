@@ -69,6 +69,13 @@ public class TaskController {
         return ApiResponse.success(taskService.getTasksByGoal(goalId));
     }
 
+    @PutMapping("/{id}/goals")
+    public ApiResponse<Void> updateGoals(@PathVariable Long id,
+                                         @RequestBody TaskDTO.UpdateGoalsRequest request) {
+        taskService.updateTaskGoals(id, request.getGoalIds());
+        return ApiResponse.success();
+    }
+
     @PutMapping("/{id}/complete")
     public ApiResponse<Void> complete(@PathVariable Long id) {
         taskService.completeTask(id);

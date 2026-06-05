@@ -174,6 +174,31 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
+    public void updateTaskGoals(Long taskId, List<Long> goalIds) {
+        List<GoalTask> existing = goalTaskRepository.findByTaskId(taskId);
+        Set<Long> currentIds = existing.stream()
+                .map(GoalTask::getGoalId)
+                .collect(Collectors.toSet());
+        Set<Long> newIds = new java.util.HashSet<>(goalIds);
+
+        for (GoalTask gt : existing) {
+            if (!newIds.contains(gt.getGoalId())) {
+                goalTaskRepository.delete(gt);
+            }
+        }
+
+        for (Long gid : goalIds) {
+            if (!currentIds.contains(gid)) {
+                GoalTask gt = new GoalTask();
+                gt.setTaskId(taskId);
+                gt.setGoalId(gid);
+                goalTaskRepository.save(gt);
+            }
+        }
+    }
+
+    @Override
+    @Transactional
     public void completeTask(Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new EntityNotFoundException("任务不存在"));

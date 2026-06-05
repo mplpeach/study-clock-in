@@ -212,8 +212,8 @@ const CheckInPage: React.FC = () => {
       taskId = values.taskId;
     } else {
       const task = await taskApi.create({ name: values.name, description: values.description });
-      if (values.goalId) {
-        await taskApi.bindToGoal(task.id, values.goalId);
+      if (values.goalIds?.length) {
+        await taskApi.updateGoals(task.id, values.goalIds);
       }
       taskId = task.id;
     }
@@ -391,8 +391,8 @@ const CheckInPage: React.FC = () => {
       taskId = values.taskId;
     } else {
       const task = await taskApi.create({ name: values.name, description: values.description });
-      if (values.goalId) {
-        await taskApi.bindToGoal(task.id, values.goalId);
+      if (values.goalIds?.length) {
+        await taskApi.updateGoals(task.id, values.goalIds);
       }
       taskId = task.id;
     }
@@ -459,8 +459,8 @@ const CheckInPage: React.FC = () => {
           <Form.Item name="description" label="描述">
             <Input.TextArea className="cute-input" rows={2} />
           </Form.Item>
-          <Form.Item name="goalId" label="关联目标">
-            <Select placeholder="选择目标（可选）" allowClear className="cute-input">
+          <Form.Item name="goalIds" label="关联目标">
+            <Select placeholder="选择目标（可选，可多选）" allowClear mode="multiple" maxTagCount={2} className="cute-input">
               {goals.map((g) => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}
             </Select>
           </Form.Item>

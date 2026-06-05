@@ -80,7 +80,7 @@ const TasksPage: React.FC = () => {
       scheduledDate: task.scheduledDate ? dayjs(task.scheduledDate) : undefined,
       repeatRule: task.repeatRule || 'NONE',
       weeklyDays: task.weeklyDays ? task.weeklyDays.split(',').map(Number) : [],
-      goalId: task.goalIds?.[0] || task.goalId || undefined,
+      goalIds: task.goalIds || [],
     });
     setModalOpen(true);
   };
@@ -98,19 +98,12 @@ const TasksPage: React.FC = () => {
     };
     if (editingTask) {
       await taskApi.update(editingTask.id, payload);
-      const oldGoalId = editingTask.goalIds?.[0] || editingTask.goalId;
-      const newGoalId: number | undefined = values.goalId;
-      if (oldGoalId && oldGoalId !== newGoalId) {
-        await taskApi.unbindFromGoal(editingTask.id, oldGoalId);
-      }
-      if (newGoalId && newGoalId !== oldGoalId) {
-        await taskApi.bindToGoal(editingTask.id, newGoalId);
-      }
+      await taskApi.updateGoals(editingTask.id, values.goalIds || []);
       message.success('任务已更新 ✨');
     } else {
       const created = await taskApi.create(payload);
-      if (values.goalId) {
-        await taskApi.bindToGoal(created.id, values.goalId);
+      if (values.goalIds?.length) {
+        await taskApi.updateGoals(created.id, values.goalIds);
       }
       message.success('任务已创建 ✨');
     }
@@ -419,8 +412,8 @@ const TasksPage: React.FC = () => {
           <Form.Item name="description" label="描述">
             <Input.TextArea className="cute-input" rows={3} />
           </Form.Item>
-          <Form.Item name="goalId" label="关联目标">
-            <Select className="cute-input" placeholder="选择关联的目标（选填）" allowClear>
+          <Form.Item name="goalIds" label="关联目标">
+            <Select className="cute-input" placeholder="选择关联的目标（可多选）" allowClear mode="multiple" maxTagCount={3}>
               {goals.map((g) => (
                 <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>
               ))}
