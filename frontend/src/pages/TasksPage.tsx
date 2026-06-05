@@ -3,11 +3,11 @@ import {
   Card, Button, Modal, Form, Input, Select, DatePicker, Checkbox, Table, Tag, Popconfirm, message, Space,
   Tabs, Collapse, Empty,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined, CaretRightOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { taskApi, goalApi } from '../api';
 import type { Task, Goal } from '../api';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const { Panel } = Collapse;
 
@@ -30,6 +30,7 @@ const TasksPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [form] = Form.useForm();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const goalIdFilter = searchParams.get('goalId');
 
   const fetchTasks = async () => {
@@ -252,6 +253,10 @@ const TasksPage: React.FC = () => {
             </>
           ) : (
             <>
+              <Button type="link" style={{ color: '#2ed573' }} icon={<CaretRightOutlined />} size="small"
+                onClick={() => navigate(`/checkin?autoStartTaskId=${record.id}`)}>
+                开始
+              </Button>
               <Button type="link" style={{ color: '#8c6f7a' }} icon={<EditOutlined />} size="small" onClick={() => openEdit(record)}>编辑</Button>
               {isRecurring(record) ? (
                 <Popconfirm title="确定停止该循环任务吗？停止后不会再生成新实例" onConfirm={() => handleComplete(record.id)}>

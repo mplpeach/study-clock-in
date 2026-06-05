@@ -8,6 +8,7 @@ import {
   HistoryOutlined, InboxOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useSearchParams } from 'react-router-dom';
 import { instanceApi, checkInApi, taskApi, goalApi } from '../api';
 import type { TaskInstance, Task, Goal } from '../api';
 
@@ -51,6 +52,7 @@ const CheckInPage: React.FC = () => {
   const [manualFiles, setManualFiles] = useState<File[]>([]);
 
   const today = dayjs().format('YYYY-MM-DD');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchData = async () => {
     try {
@@ -201,6 +203,39 @@ const CheckInPage: React.FC = () => {
       fetchData();
     } catch (e: any) { message.error(e.message); }
   };
+
+  // ===== 从任务页跳转过来，自动开始任务 =====
+  useEffect(() => {
+    const taskIdStr = searchParams.get('autoStartTaskId');
+    if (!taskIdStr || tasks.length === 0 || activeRecordId !== null) return;
+
+    const taskId = Number(taskIdStr);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.status === 'COMPLETED') return;
+
+    searchParams.delete('autoStartTaskId');
+    setSearchParams(searchParams, { replace: true });
+
+    (async () => {
+      try {
+        // 单次任务 + 未来 scheduledDate：把未来实例挪到今天（删旧 + 建新）
+        if (task.repeatRule === 'NONE' && task.scheduledDate && task.scheduledDate > today) {
+          try {
+            const futureInstances = await instanceApi.getByDate(task.scheduledDate);
+            const futureInstance = futureInstances.find((i) => i.taskId === taskId);
+            if (futureInstance) {
+              await instanceApi.delete(futureInstance.id);
+            }
+          } catch { /* 非关键，删除失败也不阻塞 */ }
+        }
+
+        const instance = await resolveInstance(taskId);
+        await handleResume(instance.id);
+      } catch (e: any) {
+        message.error(e?.message || '启动任务失败');
+      }
+    })();
+  }, [tasks, todayInstances]);
 
   // ===== 暂停（提交内容 + 时长，但不完成实例） =====
   const handlePause = async () => {
@@ -455,6 +490,18 @@ const CheckInPage: React.FC = () => {
               >
                 <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
                 <Text delete style={{ color: '#8c6f7a' }}>{item.taskName}</Text>
+                {(() => {
+                  const pt = tasks.find((t) => t.id === item.taskId);
+                  if (pt && pt.repeatRule === 'NONE' && pt.scheduledDate && pt.scheduledDate > today) {
+                    const daysLeft = dayjs(pt.scheduledDate).diff(dayjs(today), 'day');
+                    return (
+                      <Tag className="cute-tag" color="orange" style={{ fontSize: 11, marginLeft: 4 }}>
+                        提前开始 · 原定{dayjs(pt.scheduledDate).format('M月D日')} · 还剩{daysLeft}天
+                      </Tag>
+                    );
+                  }
+                  return null;
+                })()}
                 <Text type="secondary" style={{ marginLeft: 8, fontSize: 12, color: '#b8929e' }}>
                   {item.scheduledDate}
                 </Text>
@@ -531,6 +578,18 @@ const CheckInPage: React.FC = () => {
                     <Space>
                       <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{item.taskName}</span>
                       {item.goalName && <Tag className="cute-tag" color="#a29bfe" style={{ fontSize: 11 }}>{item.goalName}</Tag>}
+                      {(() => {
+                        const pt = tasks.find((t) => t.id === item.taskId);
+                        if (pt && pt.repeatRule === 'NONE' && pt.scheduledDate && pt.scheduledDate > today) {
+                          const daysLeft = dayjs(pt.scheduledDate).diff(dayjs(today), 'day');
+                          return (
+                            <Tag className="cute-tag" color="orange" style={{ fontSize: 11 }}>
+                              提前开始 · 原定{dayjs(pt.scheduledDate).format('M月D日')} · 还剩{daysLeft}天
+                            </Tag>
+                          );
+                        }
+                        return null;
+                      })()}
                     </Space>
                   }
                   description={
