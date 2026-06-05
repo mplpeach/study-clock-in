@@ -56,6 +56,7 @@ const CheckInPage: React.FC = () => {
   const [endFiles, setEndFiles] = useState<File[]>([]);
 
   const [detailInstanceId, setDetailInstanceId] = useState<number | null>(null);
+  const [expandedCompleted, setExpandedCompleted] = useState<Set<string>>(new Set());
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [manualTaskType, setManualTaskType] = useState<'existing' | 'new'>('existing');
   const [manualForm] = Form.useForm();
@@ -677,15 +678,13 @@ const CheckInPage: React.FC = () => {
               </>
             )}
 
-            {group.todayItems.length > 0 && (
-              <>
-                {group.overdueItems.length > 0 && (
-                  <Divider style={{ margin: '12px 0', borderColor: '#ffe0e6' }} />
-                )}
-                <List
-                  size="small"
-                  dataSource={group.todayItems}
-                  renderItem={(item) => (
+            {(() => {
+              const activeItems = group.todayItems.filter((i) => i.status !== 'COMPLETED');
+              const completedItems = group.todayItems.filter((i) => i.status === 'COMPLETED');
+              const groupKey = group.goalId != null ? String(group.goalId) : 'unclassified';
+              const showCompleted = expandedCompleted.has(groupKey);
+
+              const renderTaskRow = (item: TaskInstance) => (
                     <List.Item className="log-row"
                       actions={
                         isActiveInstance(item.id)
@@ -788,10 +787,49 @@ const CheckInPage: React.FC = () => {
                         }
                       />
                     </List.Item>
+                  );
+
+              return (
+                <>
+                  {group.overdueItems.length > 0 && (
+                    <Divider style={{ margin: '12px 0', borderColor: '#ffe0e6' }} />
                   )}
-                />
-              </>
-            )}
+                  {activeItems.length > 0 && (
+                    <List size="small" dataSource={activeItems} renderItem={renderTaskRow} />
+                  )}
+                  {completedItems.length > 0 && (
+                    <>
+                      <div className={`completed-collapse${showCompleted ? ' open' : ''}`}>
+                        <List size="small" dataSource={completedItems} renderItem={renderTaskRow} />
+                      </div>
+                      <div
+                        onClick={() => {
+                          setExpandedCompleted((prev) => {
+                            const next = new Set(prev);
+                            if (showCompleted) next.delete(groupKey);
+                            else next.add(groupKey);
+                            return next;
+                          });
+                        }}
+                        style={{
+                          cursor: 'pointer',
+                          padding: '8px 12px',
+                          borderRadius: 12,
+                          background: '#fef0f3',
+                          textAlign: 'center',
+                          color: '#b8929e',
+                          fontSize: 13,
+                          marginTop: showCompleted ? 8 : 0,
+                          userSelect: 'none',
+                        }}
+                      >
+                        {showCompleted ? '收起 ▲' : `已完成 ${completedItems.length} 项 ▼`}
+                      </div>
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </Card>
         ))
       )}
