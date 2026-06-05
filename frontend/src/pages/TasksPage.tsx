@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, Button, Modal, Form, Input, Select, DatePicker, Checkbox, Table, Tag, Popconfirm, message, Space,
+  Card, Button, Modal, Form, Input, Select, DatePicker, Checkbox, Table, Tag, message, Space,
   Tabs, Collapse, Empty,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined, CaretRightOutlined } from '@ant-design/icons';
@@ -244,12 +244,38 @@ const TasksPage: React.FC = () => {
           {record.status === 'COMPLETED' ? (
             <>
               <Button type="link" style={{ color: '#2ed573' }} icon={<UndoOutlined />} size="small"
-                onClick={() => handleReactivate(record.id)}>
+                onClick={() => {
+                  Modal.confirm({
+                    icon: <UndoOutlined style={{ color: '#2ed573' }} />,
+                    title: '确定重新激活这个任务吗？',
+                    content: '激活后将重新出现在任务列表中，并恢复正常使用。',
+                    className: 'cute-modal',
+                    centered: true,
+                    okText: '确定',
+                    cancelText: '取消',
+                    okButtonProps: { style: { borderRadius: 20, background: '#2ed573', borderColor: '#2ed573' } },
+                    cancelButtonProps: { style: { borderRadius: 20 } },
+                    onOk: () => handleReactivate(record.id),
+                  });
+                }}>
                 重新激活
               </Button>
-              <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(record.id)}>
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">删除</Button>
-              </Popconfirm>
+              <Button type="link" danger icon={<DeleteOutlined />} size="small"
+                onClick={() => {
+                  Modal.confirm({
+                    icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                    title: '确定删除吗？',
+                    className: 'cute-modal',
+                    centered: true,
+                    okText: '确定',
+                    cancelText: '取消',
+                    okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                    cancelButtonProps: { style: { borderRadius: 20 } },
+                    onOk: () => handleDelete(record.id),
+                  });
+                }}>
+                删除
+              </Button>
             </>
           ) : (
             <>
@@ -259,13 +285,40 @@ const TasksPage: React.FC = () => {
               </Button>
               <Button type="link" style={{ color: '#8c6f7a' }} icon={<EditOutlined />} size="small" onClick={() => openEdit(record)}>编辑</Button>
               {isRecurring(record) ? (
-                <Popconfirm title="确定停止该循环任务吗？停止后不会再生成新实例" onConfirm={() => handleComplete(record.id)}>
-                  <Button type="link" style={{ color: '#ffa502' }} icon={<StopOutlined />} size="small">停止循环</Button>
-                </Popconfirm>
+                <Button type="link" style={{ color: '#ffa502' }} icon={<StopOutlined />} size="small"
+                  onClick={() => {
+                    Modal.confirm({
+                      icon: <StopOutlined style={{ color: '#ffa502' }} />,
+                      title: '确定停止这个循环任务吗？',
+                      content: '停止后，该任务不会再自动生成每天的待办事项。',
+                      className: 'cute-modal',
+                      centered: true,
+                      okText: '确定',
+                      cancelText: '取消',
+                      okButtonProps: { style: { borderRadius: 20, background: '#ffa502', borderColor: '#ffa502' } },
+                      cancelButtonProps: { style: { borderRadius: 20 } },
+                      onOk: () => handleComplete(record.id),
+                    });
+                  }}>
+                  停止循环
+                </Button>
               ) : null}
-              <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(record.id)}>
-                <Button type="link" danger icon={<DeleteOutlined />} size="small">删除</Button>
-              </Popconfirm>
+              <Button type="link" danger icon={<DeleteOutlined />} size="small"
+                onClick={() => {
+                  Modal.confirm({
+                    icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                    title: '确定删除吗？',
+                    className: 'cute-modal',
+                    centered: true,
+                    okText: '确定',
+                    cancelText: '取消',
+                    okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                    cancelButtonProps: { style: { borderRadius: 20 } },
+                    onOk: () => handleDelete(record.id),
+                  });
+                }}>
+                删除
+              </Button>
             </>
           )}
         </Space>

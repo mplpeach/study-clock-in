@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Card, Button, Modal, Form, Input, Select, TimePicker, message, Row, Col,
-  Tag, Empty, Upload, List, Space, Typography, Popconfirm,
+  Tag, Empty, Upload, List, Space, Typography,
 } from 'antd';
 import {
   PlayCircleOutlined, PauseCircleOutlined,
@@ -555,18 +555,31 @@ const CheckInPage: React.FC = () => {
                               已完成 ✓
                             </Tag>,
                           ]),
-                        <Popconfirm
+                        <Button
+                          type="link"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
                           key="delete"
-                          title="确定删除这条任务吗？"
-                          onConfirm={() => handleDeleteInstance(item.id)}
-                        >
-                          <Button
-                            type="link"
-                            danger
-                            size="small"
-                            icon={<DeleteOutlined />}
-                          />
-                        </Popconfirm>,
+                          onClick={() => {
+                            Modal.confirm({
+                              icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                              title: '确定删除这条任务吗？',
+                              className: 'cute-modal',
+                              centered: true,
+                              okText: '确定',
+                              cancelText: '取消',
+                              okButtonProps: {
+                                danger: true,
+                                style: { borderRadius: 20 },
+                              },
+                              cancelButtonProps: {
+                                style: { borderRadius: 20 },
+                              },
+                              onOk: () => handleDeleteInstance(item.id),
+                            });
+                          }}
+                        />,
                       ]
                 }
               >
