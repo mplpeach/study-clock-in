@@ -3,7 +3,7 @@ import {
   Card, Button, Modal, Form, Input, Select, DatePicker, Checkbox, Table, Tag, Popconfirm, message, Space,
   Tabs, Collapse, Empty,
 } from 'antd';
-import { PlusOutlined, LinkOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, UndoOutlined, StopOutlined } from '@ant-design/icons';
+import { PlusOutlined, LinkOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { taskApi, goalApi } from '../api';
 import type { Task, Goal } from '../api';
@@ -123,15 +123,23 @@ const TasksPage: React.FC = () => {
   };
 
   const handleComplete = async (id: number) => {
-    await taskApi.complete(id);
-    message.success('任务已完成 ✨');
-    fetchTasks();
+    try {
+      await taskApi.complete(id);
+      message.success('任务已停止 ✨');
+      fetchTasks();
+    } catch (e: any) {
+      message.error(e?.message || '操作失败');
+    }
   };
 
   const handleReactivate = async (id: number) => {
-    await taskApi.reactivate(id);
-    message.success('任务已重新激活 💪');
-    fetchTasks();
+    try {
+      await taskApi.reactivate(id);
+      message.success('任务已重新激活 💪');
+      fetchTasks();
+    } catch (e: any) {
+      message.error(e?.message || '操作失败');
+    }
   };
 
   // ---- 分组与筛选 ----
@@ -252,11 +260,7 @@ const TasksPage: React.FC = () => {
                 <Popconfirm title="确定停止该循环任务吗？停止后不会再生成新实例" onConfirm={() => handleComplete(record.id)}>
                   <Button type="link" style={{ color: '#ffa502' }} icon={<StopOutlined />} size="small">停止循环</Button>
                 </Popconfirm>
-              ) : (
-                <Popconfirm title="确定标记为完成吗？" onConfirm={() => handleComplete(record.id)}>
-                  <Button type="link" style={{ color: '#2ed573' }} icon={<CheckCircleOutlined />} size="small">标记完成</Button>
-                </Popconfirm>
-              )}
+              ) : null}
               <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(record.id)}>
                 <Button type="link" danger icon={<DeleteOutlined />} size="small">删除</Button>
               </Popconfirm>
