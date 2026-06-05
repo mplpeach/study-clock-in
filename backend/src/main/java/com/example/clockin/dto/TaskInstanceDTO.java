@@ -9,8 +9,13 @@ public class TaskInstanceDTO {
     private Long id;
     private Long taskId;
     private String taskName;
+    private String description;
     private Long goalId;
     private String goalName;
+    private java.util.List<Long> goalIds;
+    private java.util.List<String> goalNames;
+    private String repeatRule;
+    private String taskScheduledDate;
     private LocalDate scheduledDate;
     private TaskInstanceStatus status;
 

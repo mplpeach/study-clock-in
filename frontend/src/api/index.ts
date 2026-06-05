@@ -53,8 +53,13 @@ export interface TaskInstance {
   id: number;
   taskId: number;
   taskName: string;
+  description?: string;
   goalId?: number;
   goalName?: string;
+  goalIds?: number[];
+  goalNames?: string[];
+  repeatRule?: string;
+  taskScheduledDate?: string;
   scheduledDate: string;
   status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
 }

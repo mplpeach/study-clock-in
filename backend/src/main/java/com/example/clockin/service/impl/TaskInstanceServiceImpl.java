@@ -127,14 +127,29 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
         Task task = taskRepository.findById(instance.getTaskId()).orElse(null);
         if (task != null) {
             dto.setTaskName(task.getName());
+            dto.setDescription(task.getDescription());
+            dto.setRepeatRule(task.getRepeatRule().name());
+            if (task.getScheduledDate() != null) {
+                dto.setTaskScheduledDate(task.getScheduledDate().toString());
+            }
 
-            goalTaskRepository.findByTaskId(task.getId()).stream()
-                    .findFirst()
-                    .ifPresent(gt -> {
-                        dto.setGoalId(gt.getGoalId());
-                        goalRepository.findById(gt.getGoalId())
-                                .ifPresent(g -> dto.setGoalName(g.getName()));
-                    });
+            List<GoalTask> goalTasks = goalTaskRepository.findByTaskId(task.getId());
+            List<Long> goalIds = goalTasks.stream().map(GoalTask::getGoalId).collect(Collectors.toList());
+            dto.setGoalIds(goalIds);
+
+            List<String> goalNames = goalTasks.stream()
+                    .map(gt -> goalRepository.findById(gt.getGoalId())
+                            .map(Goal::getName).orElse(null))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            dto.setGoalNames(goalNames);
+
+            if (!goalIds.isEmpty()) {
+                dto.setGoalId(goalIds.get(0));
+                if (!goalNames.isEmpty()) {
+                    dto.setGoalName(goalNames.get(0));
+                }
+            }
         }
 
         return dto;

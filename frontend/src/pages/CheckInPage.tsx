@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import {
   PlayCircleOutlined, PauseCircleOutlined,
-  HistoryOutlined, InboxOutlined, DeleteOutlined,
+  HistoryOutlined, InboxOutlined, DeleteOutlined, InfoCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
@@ -55,6 +55,7 @@ const CheckInPage: React.FC = () => {
   const [endForm] = Form.useForm();
   const [endFiles, setEndFiles] = useState<File[]>([]);
 
+  const [detailInstanceId, setDetailInstanceId] = useState<number | null>(null);
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [manualTaskType, setManualTaskType] = useState<'existing' | 'new'>('existing');
   const [manualForm] = Form.useForm();
@@ -111,8 +112,7 @@ const CheckInPage: React.FC = () => {
       (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
 
     for (const item of todayInstances) {
-      const task = tasks.find((t) => t.id === item.taskId);
-      const goalIds = task?.goalIds;
+      const goalIds = item.goalIds;
       if (goalIds && goalIds.length > 0) {
         for (const gid of goalIds) {
           const group = map.get(gid);
@@ -124,8 +124,7 @@ const CheckInPage: React.FC = () => {
     }
 
     for (const item of overdueInstances) {
-      const task = tasks.find((t) => t.id === item.taskId);
-      const goalIds = task?.goalIds;
+      const goalIds = item.goalIds;
       if (goalIds && goalIds.length > 0) {
         for (const gid of goalIds) {
           const group = map.get(gid);
@@ -144,9 +143,20 @@ const CheckInPage: React.FC = () => {
     return Array.from(map.values())
       .filter((g) => g.todayItems.length > 0 || g.overdueItems.length > 0)
       .sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [goals, tasks, todayInstances, overdueInstances]);
+  }, [goals, todayInstances, overdueInstances]);
 
   const timerDisplay = accumulatedElapsed + elapsed;
+
+  const detailInstance = useMemo(() => {
+    if (detailInstanceId == null) return null;
+    return (
+      todayInstances.find((i) => i.id === detailInstanceId) ||
+      overdueInstances.find((i) => i.id === detailInstanceId) ||
+      null
+    );
+  }, [detailInstanceId, todayInstances, overdueInstances]);
+
+  const dayNames: Record<string, string> = { '1': '一', '2': '二', '3': '三', '4': '四', '5': '五', '6': '六', '7': '日' };
 
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
@@ -626,29 +636,26 @@ const CheckInPage: React.FC = () => {
                           <Space>
                             <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
                             <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{item.taskName}</span>
+<InfoCircleOutlined
+  style={{ color: '#b8929e', cursor: 'pointer', fontSize: 14 }}
+  onClick={() => setDetailInstanceId(item.id)}
+/>
                             {(() => {
-                              const pt = tasks.find((t) => t.id === item.taskId);
-                              if (pt && pt.repeatRule === 'NONE' && pt.scheduledDate && pt.scheduledDate > today) {
-                                const daysLeft = dayjs(pt.scheduledDate).diff(dayjs(today), 'day');
+                              if (item.repeatRule === 'NONE' && item.taskScheduledDate && item.taskScheduledDate > today) {
+                                const daysLeft = dayjs(item.taskScheduledDate).diff(dayjs(today), 'day');
                                 return (
                                   <Tag className="cute-tag" color="orange" style={{ fontSize: 11 }}>
-                                    提前开始 · 原定{dayjs(pt.scheduledDate).format('M月D日')} · 还剩{daysLeft}天
+                                    提前开始 · 原定{dayjs(item.taskScheduledDate).format('M月D日')} · 还剩{daysLeft}天
                                   </Tag>
                                 );
                               }
                               return null;
                             })()}
-                            {(() => {
-                              const pt = tasks.find((t) => t.id === item.taskId);
-                              if (pt?.goalIds && pt.goalIds.length > 1) {
-                                return (
-                                  <Tag className="cute-tag" color="processing" style={{ fontSize: 10 }}>
-                                    {pt.goalIds.length} 个目标
-                                  </Tag>
-                                );
-                              }
-                              return null;
-                            })()}
+                            {item.goalIds && item.goalIds.length > 1 && (
+                              <Tag className="cute-tag" color="processing" style={{ fontSize: 10 }}>
+                                {item.goalIds.length} 个目标
+                              </Tag>
+                            )}
                             <Text type="secondary" style={{ fontSize: 12, color: '#b8929e' }}>
                               {item.scheduledDate}
                             </Text>
@@ -748,29 +755,26 @@ const CheckInPage: React.FC = () => {
                         title={
                           <Space>
                             <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{item.taskName}</span>
+<InfoCircleOutlined
+  style={{ color: '#b8929e', cursor: 'pointer', fontSize: 14 }}
+  onClick={() => setDetailInstanceId(item.id)}
+/>
                             {(() => {
-                              const pt = tasks.find((t) => t.id === item.taskId);
-                              if (pt && pt.repeatRule === 'NONE' && pt.scheduledDate && pt.scheduledDate > today) {
-                                const daysLeft = dayjs(pt.scheduledDate).diff(dayjs(today), 'day');
+                              if (item.repeatRule === 'NONE' && item.taskScheduledDate && item.taskScheduledDate > today) {
+                                const daysLeft = dayjs(item.taskScheduledDate).diff(dayjs(today), 'day');
                                 return (
                                   <Tag className="cute-tag" color="orange" style={{ fontSize: 11 }}>
-                                    提前开始 · 原定{dayjs(pt.scheduledDate).format('M月D日')} · 还剩{daysLeft}天
+                                    提前开始 · 原定{dayjs(item.taskScheduledDate).format('M月D日')} · 还剩{daysLeft}天
                                   </Tag>
                                 );
                               }
                               return null;
                             })()}
-                            {(() => {
-                              const pt = tasks.find((t) => t.id === item.taskId);
-                              if (pt?.goalIds && pt.goalIds.length > 1) {
-                                return (
-                                  <Tag className="cute-tag" color="processing" style={{ fontSize: 10 }}>
-                                    {pt.goalIds.length} 个目标
-                                  </Tag>
-                                );
-                              }
-                              return null;
-                            })()}
+                            {item.goalIds && item.goalIds.length > 1 && (
+                              <Tag className="cute-tag" color="processing" style={{ fontSize: 10 }}>
+                                {item.goalIds.length} 个目标
+                              </Tag>
+                            )}
                           </Space>
                         }
                         description={
@@ -961,6 +965,72 @@ const CheckInPage: React.FC = () => {
             </Dragger>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* ===== 任务详情 Modal ===== */}
+      <Modal
+        className="cute-modal"
+        title="📋 任务详情"
+        open={detailInstanceId !== null}
+        onCancel={() => setDetailInstanceId(null)}
+        footer={null}
+        width={480}
+      >
+        {detailInstance && (
+          <div style={{ color: '#5a3d4a' }}>
+            <div style={{ marginBottom: 16 }}>
+              <Text strong style={{ fontSize: 16 }}>{detailInstance.taskName}</Text>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>描述</Text>
+              <div style={{ marginTop: 4, padding: '8px 12px', background: '#fef0f3', borderRadius: 12, fontSize: 14, lineHeight: 1.6 }}>
+                {detailInstance.description || <span style={{ color: '#b8929e' }}>暂无描述</span>}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>关联目标</Text>
+              <div style={{ marginTop: 4 }}>
+                {detailInstance.goalNames && detailInstance.goalNames.length > 0 ? (
+                  <Space wrap size={[8, 4]}>
+                    {detailInstance.goalNames.map((name, idx) => (
+                      <Tag className="cute-tag" key={idx} color="#a29bfe" style={{ fontSize: 12 }}>
+                        {name}
+                      </Tag>
+                    ))}
+                  </Space>
+                ) : (
+                  <span style={{ color: '#b8929e', fontSize: 14 }}>未关联</span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>重复规则</Text>
+              <div style={{ marginTop: 4, fontSize: 14 }}>
+                {detailInstance.repeatRule === 'DAILY' ? '每天' :
+                 detailInstance.repeatRule === 'WEEKLY' ? '每周' :
+                 detailInstance.taskScheduledDate
+                   ? `单次 · ${dayjs(detailInstance.taskScheduledDate).format('M月D日')}`
+                   : '不重复'}
+              </div>
+            </div>
+
+            <div>
+              <Text type="secondary" style={{ fontSize: 13 }}>当前状态</Text>
+              <div style={{ marginTop: 4 }}>
+                <Tag className="cute-tag" color={
+                  detailInstance.status === 'COMPLETED' ? 'success' :
+                  detailInstance.status === 'IN_PROGRESS' ? 'warning' : 'default'
+                } style={{ fontSize: 13, padding: '2px 12px' }}>
+                  {detailInstance.status === 'COMPLETED' ? '✅ 已完成' :
+                   detailInstance.status === 'IN_PROGRESS' ? '⏳ 进行中' : '📝 待开始'}
+                </Tag>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
