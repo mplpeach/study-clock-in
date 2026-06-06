@@ -12,6 +12,8 @@ public class GoalDTO {
     private String color;
     private Integer sortOrder;
     private List<TaskDTO> tasks;
+    private int completedTaskCount;
+    private int totalTaskCount;
 
     @Data
     public static class CreateRequest {

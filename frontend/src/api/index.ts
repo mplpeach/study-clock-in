@@ -7,6 +7,8 @@ export interface Goal {
   color: string;
   sortOrder: number;
   tasks: Task[];
+  completedTaskCount: number;
+  totalTaskCount: number;
 }
 
 export interface Task {

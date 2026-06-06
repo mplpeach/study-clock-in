@@ -196,15 +196,29 @@ const GoalsPage: React.FC = () => {
                         description={goal.description || '暂无描述'}
                       />
                       <div style={{ marginTop: 12 }}>
-                        {goal.tasks?.length > 0 ? (
-                          (<Space size={[4, 6]} wrap>
-                            {goal.tasks.slice(0, 4).map((t) => (
-                              <Tag className="cute-tag" color="#ff6b81" key={t.id}>{t.name}</Tag>
-                            ))}
-                            {goal.tasks.length > 4 && (
-                              <Tag className="cute-tag" color="#b8929e">+{goal.tasks.length - 4}</Tag>
-                            )}
-                          </Space>)
+                        {goal.totalTaskCount > 0 ? (
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                              <span style={{ color: '#b8929e', fontSize: 12 }}>任务进度</span>
+                              <span style={{ color: '#5a3d4a', fontSize: 12, fontWeight: 600 }}>
+                                已完成 {goal.completedTaskCount}/{goal.totalTaskCount}
+                              </span>
+                            </div>
+                            <div style={{
+                              height: 6,
+                              borderRadius: 3,
+                              background: '#fef0f3',
+                              overflow: 'hidden',
+                            }}>
+                              <div style={{
+                                height: '100%',
+                                width: `${Math.round((goal.completedTaskCount / goal.totalTaskCount) * 100)}%`,
+                                borderRadius: 3,
+                                background: 'linear-gradient(90deg, #ff6b81, #f58ca0, #f9a8d4)',
+                                transition: 'width 0.3s ease',
+                              }} />
+                            </div>
+                          </div>
                         ) : (
                           <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
                         )}

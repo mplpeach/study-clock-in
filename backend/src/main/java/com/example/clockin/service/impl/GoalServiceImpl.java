@@ -106,10 +106,14 @@ public class GoalServiceImpl implements GoalService {
                     td.setName(t.getName());
                     td.setDescription(t.getDescription());
                     td.setGoalId(goal.getId());
+                    td.setStatus(t.getStatus().name());
                     return td;
                 })
                 .collect(Collectors.toList());
         dto.setTasks(tasks);
+        dto.setTotalTaskCount(tasks.size());
+        dto.setCompletedTaskCount((int) tasks.stream()
+                .filter(t -> "COMPLETED".equals(t.getStatus())).count());
         return dto;
     }
 }

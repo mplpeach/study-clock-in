@@ -197,6 +197,7 @@ input, textarea {
   height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-right: 8px;
 }
 
 .goal-section-title {
