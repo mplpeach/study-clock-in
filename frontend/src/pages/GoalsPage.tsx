@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Button, Modal, Form, Input, Row, Col, Tag, Empty, message,
-  List, DatePicker, Select, Checkbox, Space,
+  List, DatePicker, Select, Checkbox, Space, Pagination,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -20,6 +20,9 @@ const GoalsPage: React.FC = () => {
   const [panelGoal, setPanelGoal] = useState<Goal | null>(null);
   const [selectedTasks, setSelectedTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   const [taskEditOpen, setTaskEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -149,59 +152,73 @@ const GoalsPage: React.FC = () => {
           {goals.length === 0 && !loading ? (
             <Empty description="还没有学习目标，创建一个吧~" />
           ) : (
-            <Row gutter={[16, 16]}>
-              {goals.map((goal) => (
-                <Col span={24} key={goal.id}>
-                  <Card
-                    className="goal-card"
-                    actions={[
-                      <Button type="text" icon={<UnorderedListOutlined />}
-                        onClick={() => openTaskPanel(goal)} key="tasks">
-                        查看任务
-                      </Button>,
-                      <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(goal)} key="edit">
-                        编辑
-                      </Button>,
-                      <Button type="text" danger icon={<DeleteOutlined />} key="delete"
-                        onClick={() => {
-                          Modal.confirm({
-                            icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
-                            title: '确定删除这个目标吗？',
-                            content: '删除目标不会删除关联的任务。',
-                            className: 'cute-modal',
-                            centered: true,
-                            okText: '确定',
-                            cancelText: '取消',
-                            okButtonProps: { danger: true, style: { borderRadius: 20 } },
-                            cancelButtonProps: { style: { borderRadius: 20 } },
-                            onOk: () => handleDelete(goal.id),
-                          });
-                        }}
-                      >
-                        删除
-                      </Button>,
-                    ]}
-                  >
-                    <Card.Meta
-                      title={
-                        <span style={{ fontSize: 16, fontWeight: 600, color: '#5a3d4a' }}>
-                          <span className="goal-color-dot" style={{ background: goal.color || '#ff6b81' }} />
-                          {goal.name}
-                        </span>
-                      }
-                      description={goal.description || '暂无描述'}
-                    />
-                    <div style={{ marginTop: 12 }}>
-                      {goal.tasks?.length > 0 ? (
-                        goal.tasks.map((t) => <Tag className="cute-tag" color="#ff6b81" key={t.id}>{t.name}</Tag>)
-                      ) : (
-                        <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
-                      )}
-                    </div>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
+            <>
+              <Row gutter={[16, 16]}>
+                {goals.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((goal) => (
+                  <Col span={24} key={goal.id}>
+                    <Card
+                      className="goal-card"
+                      actions={[
+                        <Button type="text" icon={<UnorderedListOutlined />}
+                          onClick={() => openTaskPanel(goal)} key="tasks">
+                          查看任务
+                        </Button>,
+                        <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(goal)} key="edit">
+                          编辑
+                        </Button>,
+                        <Button type="text" danger icon={<DeleteOutlined />} key="delete"
+                          onClick={() => {
+                            Modal.confirm({
+                              icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                              title: '确定删除这个目标吗？',
+                              content: '删除目标不会删除关联的任务。',
+                              className: 'cute-modal',
+                              centered: true,
+                              okText: '确定',
+                              cancelText: '取消',
+                              okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                              cancelButtonProps: { style: { borderRadius: 20 } },
+                              onOk: () => handleDelete(goal.id),
+                            });
+                          }}
+                        >
+                          删除
+                        </Button>,
+                      ]}
+                    >
+                      <Card.Meta
+                        title={
+                          <span style={{ fontSize: 16, fontWeight: 600, color: '#5a3d4a' }}>
+                            <span className="goal-color-dot" style={{ background: goal.color || '#ff6b81' }} />
+                            {goal.name}
+                          </span>
+                        }
+                        description={goal.description || '暂无描述'}
+                      />
+                      <div style={{ marginTop: 12 }}>
+                        {goal.tasks?.length > 0 ? (
+                          goal.tasks.map((t) => <Tag className="cute-tag" color="#ff6b81" key={t.id}>{t.name}</Tag>)
+                        ) : (
+                          <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
+                        )}
+                      </div>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+              {goals.length > PAGE_SIZE && (
+                <div style={{ textAlign: 'center', marginTop: 20 }}>
+                  <Pagination
+                    current={currentPage}
+                    pageSize={PAGE_SIZE}
+                    total={goals.length}
+                    onChange={(page) => setCurrentPage(page)}
+                    showSizeChanger={false}
+                    size="small"
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -217,6 +234,7 @@ const GoalsPage: React.FC = () => {
             <Card
               className="cute-card"
               style={{ width: 400 }}
+              styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' } }}
               title={
                 <Space>
                   <span className="goal-color-dot" style={{ background: panelGoal.color || '#ff6b81' }} />
