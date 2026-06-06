@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Button, Modal, Form, Input, Row, Col, Tag, Empty, message,
+  List, DatePicker, Select, Checkbox, Space,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined } from '@ant-design/icons';
-import { goalApi } from '../api';
-import type { Goal } from '../api';
-import { useNavigate } from 'react-router-dom';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined, CloseOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import { goalApi, taskApi } from '../api';
+import type { Goal, Task } from '../api';
 
 const GoalsPage: React.FC = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -13,7 +14,16 @@ const GoalsPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [form] = Form.useForm();
-  const navigate = useNavigate();
+  const [taskForm] = Form.useForm();
+
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [panelGoal, setPanelGoal] = useState<Goal | null>(null);
+  const [selectedTasks, setSelectedTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+
+  const [taskEditOpen, setTaskEditOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editRepeatRule, setEditRepeatRule] = useState('NONE');
 
   const fetchGoals = async () => {
     setLoading(true);
@@ -58,6 +68,70 @@ const GoalsPage: React.FC = () => {
     fetchGoals();
   };
 
+  const openTaskPanel = async (goal: Goal) => {
+    setPanelGoal(goal);
+    setSelectedGoal(goal);
+    setTasksLoading(true);
+    try {
+      setSelectedTasks(await taskApi.getByGoal(goal.id));
+    } catch { /* ignore */ }
+    setTasksLoading(false);
+  };
+
+  const closePanel = () => {
+    setSelectedGoal(null);
+    setTimeout(() => setPanelGoal(null), 300);
+  };
+
+  const openTaskEdit = (task: Task) => {
+    setEditingTask(task);
+    setEditRepeatRule(task.repeatRule || 'NONE');
+    taskForm.setFieldsValue({
+      name: task.name,
+      description: task.description,
+      scheduledDate: task.scheduledDate ? dayjs(task.scheduledDate) : undefined,
+      repeatRule: task.repeatRule || 'NONE',
+      weeklyDays: task.weeklyDays ? task.weeklyDays.split(',').map(Number) : [],
+      goalIds: task.goalIds || [],
+    });
+    setTaskEditOpen(true);
+  };
+
+  const handleTaskEditSubmit = async () => {
+    const values = await taskForm.validateFields();
+    const payload: any = {
+      name: values.name,
+      description: values.description,
+      scheduledDate: values.scheduledDate ? values.scheduledDate.format('YYYY-MM-DD') : undefined,
+      repeatRule: values.repeatRule || 'NONE',
+      weeklyDays: values.repeatRule === 'WEEKLY' && values.weeklyDays?.length
+        ? values.weeklyDays.sort().join(',') : undefined,
+    };
+    await taskApi.update(editingTask!.id, payload);
+    await taskApi.updateGoals(editingTask!.id, values.goalIds || []);
+    message.success('任务已更新');
+    setTaskEditOpen(false);
+    setSelectedTasks(await taskApi.getByGoal(selectedGoal!.id));
+    fetchGoals();
+  };
+
+  const handleTaskDelete = (taskId: number) => {
+    Modal.confirm({
+      icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+      title: '确定删除这个任务吗？',
+      className: 'cute-modal', centered: true,
+      okText: '确定', cancelText: '取消',
+      okButtonProps: { danger: true, style: { borderRadius: 20 } },
+      cancelButtonProps: { style: { borderRadius: 20 } },
+      onOk: async () => {
+        await taskApi.delete(taskId);
+        message.success('任务已删除');
+        setSelectedTasks((prev) => prev.filter((t) => t.id !== taskId));
+        fetchGoals();
+      },
+    });
+  };
+
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -70,63 +144,124 @@ const GoalsPage: React.FC = () => {
         </Button>
       </div>
 
-      {goals.length === 0 && !loading ? (
-        <Empty description="还没有学习目标，创建一个吧~" />
-      ) : (
-        <Row gutter={[16, 16]}>
-          {goals.map((goal) => (
-            <Col span={24} key={goal.id}>
-              <Card
-                className="goal-card"
-                actions={[
-                  <Button type="text" icon={<UnorderedListOutlined />}
-                    onClick={() => navigate(`/tasks?goalId=${goal.id}`)} key="tasks">
-                    查看任务
-                  </Button>,
-                  <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(goal)} key="edit">
-                    编辑
-                  </Button>,
-                  <Button type="text" danger icon={<DeleteOutlined />} key="delete"
-                    onClick={() => {
-                      Modal.confirm({
-                        icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
-                        title: '确定删除这个目标吗？',
-                        content: '删除目标不会删除关联的任务。',
-                        className: 'cute-modal',
-                        centered: true,
-                        okText: '确定',
-                        cancelText: '取消',
-                        okButtonProps: { danger: true, style: { borderRadius: 20 } },
-                        cancelButtonProps: { style: { borderRadius: 20 } },
-                        onOk: () => handleDelete(goal.id),
-                      });
-                    }}
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {goals.length === 0 && !loading ? (
+            <Empty description="还没有学习目标，创建一个吧~" />
+          ) : (
+            <Row gutter={[16, 16]}>
+              {goals.map((goal) => (
+                <Col span={24} key={goal.id}>
+                  <Card
+                    className="goal-card"
+                    actions={[
+                      <Button type="text" icon={<UnorderedListOutlined />}
+                        onClick={() => openTaskPanel(goal)} key="tasks">
+                        查看任务
+                      </Button>,
+                      <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(goal)} key="edit">
+                        编辑
+                      </Button>,
+                      <Button type="text" danger icon={<DeleteOutlined />} key="delete"
+                        onClick={() => {
+                          Modal.confirm({
+                            icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                            title: '确定删除这个目标吗？',
+                            content: '删除目标不会删除关联的任务。',
+                            className: 'cute-modal',
+                            centered: true,
+                            okText: '确定',
+                            cancelText: '取消',
+                            okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                            cancelButtonProps: { style: { borderRadius: 20 } },
+                            onOk: () => handleDelete(goal.id),
+                          });
+                        }}
+                      >
+                        删除
+                      </Button>,
+                    ]}
                   >
-                    删除
-                  </Button>,
-                ]}
-              >
-                <Card.Meta
-                  title={
-                    <span style={{ fontSize: 16, fontWeight: 600, color: '#5a3d4a' }}>
-                      <span className="goal-color-dot" style={{ background: goal.color || '#ff6b81' }} />
-                      {goal.name}
-                    </span>
-                  }
-                  description={goal.description || '暂无描述'}
-                />
-                <div style={{ marginTop: 12 }}>
-                  {goal.tasks?.length > 0 ? (
-                    goal.tasks.map((t) => <Tag className="cute-tag" color="#ff6b81" key={t.id}>{t.name}</Tag>)
-                  ) : (
-                    <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
+                    <Card.Meta
+                      title={
+                        <span style={{ fontSize: 16, fontWeight: 600, color: '#5a3d4a' }}>
+                          <span className="goal-color-dot" style={{ background: goal.color || '#ff6b81' }} />
+                          {goal.name}
+                        </span>
+                      }
+                      description={goal.description || '暂无描述'}
+                    />
+                    <div style={{ marginTop: 12 }}>
+                      {goal.tasks?.length > 0 ? (
+                        goal.tasks.map((t) => <Tag className="cute-tag" color="#ff6b81" key={t.id}>{t.name}</Tag>)
+                      ) : (
+                        <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
+                      )}
+                    </div>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
+        </div>
+
+        <div style={{
+          width: selectedGoal ? 400 : 0,
+          flexShrink: 0,
+          overflow: 'hidden',
+          transition: 'width 0.3s ease',
+          position: 'sticky',
+          top: 80,
+        }}>
+          {panelGoal && (
+            <Card
+              className="cute-card"
+              style={{ width: 400 }}
+              title={
+                <Space>
+                  <span className="goal-color-dot" style={{ background: panelGoal.color || '#ff6b81' }} />
+                  <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{panelGoal.name} — 任务</span>
+                </Space>
+              }
+              extra={
+                <Button type="text" icon={<CloseOutlined />}
+                  onClick={closePanel} />
+              }
+            >
+              {selectedTasks.length === 0 && !tasksLoading ? (
+                <Empty description="该目标下暂无任务" />
+              ) : (
+                <List
+                  loading={tasksLoading}
+                  dataSource={selectedTasks}
+                  renderItem={(task) => (
+                    <List.Item
+                      actions={[
+                        <Button type="text" icon={<EditOutlined />}
+                          onClick={() => openTaskEdit(task)} key="edit" />,
+                        <Button type="text" danger icon={<DeleteOutlined />}
+                          onClick={() => handleTaskDelete(task.id)} key="delete" />,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        title={task.name}
+                        description={
+                          <Space size={4} wrap>
+                            {task.repeatRule === 'DAILY' && <Tag color="#4ecdc4">每天</Tag>}
+                            {task.repeatRule === 'WEEKLY' && <Tag color="#a29bfe">每周</Tag>}
+                            {task.scheduledDate && <Tag>{dayjs(task.scheduledDate).format('M月D日')}</Tag>}
+                            {task.description && <span style={{ color: '#b8929e', fontSize: 13 }}>{task.description}</span>}
+                          </Space>
+                        }
+                      />
+                    </List.Item>
                   )}
-                </div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      )}
+                />
+              )}
+            </Card>
+          )}
+        </div>
+      </div>
 
       <Modal
         className="cute-modal"
@@ -142,6 +277,49 @@ const GoalsPage: React.FC = () => {
           <Form.Item name="description" label="描述">
             <Input.TextArea className="cute-input" rows={3} placeholder="简单描述这个目标" />
           </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        className="cute-modal" title="编辑任务"
+        open={taskEditOpen} onOk={handleTaskEditSubmit}
+        onCancel={() => setTaskEditOpen(false)} width={520}
+      >
+        <Form form={taskForm} layout="vertical" initialValues={{ repeatRule: 'NONE' }}>
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入任务名称' }]}>
+            <Input className="cute-input" />
+          </Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input.TextArea className="cute-input" rows={3} />
+          </Form.Item>
+          <Form.Item name="goalIds" label="关联目标">
+            <Select placeholder="选择目标（可多选）" allowClear mode="multiple" maxTagCount={3} className="cute-input">
+              {goals.map((g) => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item name="repeatRule" label="重复规则" initialValue="NONE">
+            <Select className="cute-input" onChange={(value) => setEditRepeatRule(value)}
+              options={[
+                { label: '不重复', value: 'NONE' },
+                { label: '每天', value: 'DAILY' },
+                { label: '每周', value: 'WEEKLY' },
+              ]} />
+          </Form.Item>
+          {editRepeatRule === 'NONE' && (
+            <Form.Item name="scheduledDate" label="安排日期（选填）">
+              <DatePicker className="cute-input" style={{ width: '100%' }} />
+            </Form.Item>
+          )}
+          {editRepeatRule === 'WEEKLY' && (
+            <Form.Item name="weeklyDays" label="选择星期">
+              <Checkbox.Group options={[
+                { label: '周一', value: 1 }, { label: '周二', value: 2 },
+                { label: '周三', value: 3 }, { label: '周四', value: 4 },
+                { label: '周五', value: 5 }, { label: '周六', value: 6 },
+                { label: '周日', value: 7 },
+              ]} />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </div>
