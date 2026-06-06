@@ -34,6 +34,6 @@ public class CheckInRecord extends BaseEntity {
     private String note;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
     private CheckInType checkInType;
 }

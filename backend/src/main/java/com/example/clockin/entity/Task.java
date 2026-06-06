@@ -26,13 +26,13 @@ public class Task extends BaseEntity {
     private LocalDate scheduledDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
     private RepeatRule repeatRule = RepeatRule.NONE;
 
     @Column(length = 20)
     private String weeklyDays;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
     private TaskStatus status = TaskStatus.ACTIVE;
 }

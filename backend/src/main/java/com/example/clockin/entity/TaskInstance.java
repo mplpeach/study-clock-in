@@ -26,7 +26,7 @@ public class TaskInstance extends BaseEntity {
     private LocalDate scheduledDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20) DEFAULT 'TODO'")
     private TaskInstanceStatus status = TaskInstanceStatus.TODO;
 
     @Column(nullable = false)

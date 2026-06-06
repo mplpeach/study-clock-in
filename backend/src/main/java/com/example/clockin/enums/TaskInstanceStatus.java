@@ -4,5 +4,6 @@ public enum TaskInstanceStatus {
     TODO,
     IN_PROGRESS,
     COMPLETED,
-    SKIPPED
+    SKIPPED,
+    DEFERRED
 }

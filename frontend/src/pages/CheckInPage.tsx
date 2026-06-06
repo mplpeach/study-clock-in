@@ -26,6 +26,7 @@ const STATUS_CONFIG: Record<string, { emoji: string; label: string; color: strin
   IN_PROGRESS:  { emoji: '⏳', label: '进行中', color: '#ffa502' },
   COMPLETED:    { emoji: '✅', label: '已完成', color: '#2ed573' },
   SKIPPED:      { emoji: '⏭️', label: '已跳过', color: '#b8929e' },
+  DEFERRED:     { emoji: '⏩', label: '已延期', color: '#b8929e' },
 };
 
 interface GoalGroup {
@@ -151,7 +152,7 @@ const CheckInPage: React.FC = () => {
     })();
   }, [todayInstances, hasRestored]);
 
-  const statusOrder: Record<string, number> = { IN_PROGRESS: 0, TODO: 1, COMPLETED: 2 };
+  const statusOrder: Record<string, number> = { IN_PROGRESS: 0, TODO: 1, DEFERRED: 2, COMPLETED: 3 };
 
   const groupedGoals = useMemo(() => {
     const map = new Map<number | null, GoalGroup>();
@@ -692,6 +693,12 @@ const CheckInPage: React.FC = () => {
                                     已跳过
                                   </Tag>,
                                 ]
+                                : item.status === 'DEFERRED'
+                                ? [
+                                  <Tag className="cute-tag" color="default" style={{ padding: '4px 12px' }} key="deferred">
+                                    已延期
+                                  </Tag>,
+                                ]
                                 : [
                                   <Button
                                     className="cute-btn"
@@ -734,7 +741,7 @@ const CheckInPage: React.FC = () => {
                       <List.Item.Meta
                         avatar={
                           <span style={{ fontSize: 20 }}>
-                            {isActiveInstance(item.id) ? '⏳' : STATUS_CONFIG[item.status]?.emoji || '📝'}
+                            {isActiveInstance(item.id) ? '⏳' : item.status === 'IN_PROGRESS' ? '⏸️' : STATUS_CONFIG[item.status]?.emoji || '📝'}
                           </span>
                         }
                         title={
@@ -771,6 +778,7 @@ const CheckInPage: React.FC = () => {
                             {isActiveInstance(item.id)
                               ? `进行中 ${formatElapsed(timerDisplay)}`
                               : item.status === 'TODO' ? '待补做'
+                              : item.status === 'IN_PROGRESS' ? '已暂停'
                               : STATUS_CONFIG[item.status]?.label || '未知'}
                           </span>
                         }
@@ -826,6 +834,12 @@ const CheckInPage: React.FC = () => {
                                     已跳过
                                   </Tag>,
                                 ]
+                                : item.status === 'DEFERRED'
+                                ? [
+                                  <Tag className="cute-tag" color="default" style={{ padding: '4px 12px' }} key="deferred">
+                                    已延期
+                                  </Tag>,
+                                ]
                                 : [
                                   <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
                                     已完成 ✓
@@ -859,7 +873,7 @@ const CheckInPage: React.FC = () => {
                       <List.Item.Meta
                         avatar={
                           <span style={{ fontSize: 20 }}>
-                            {isActiveInstance(item.id) ? '⏳' : STATUS_CONFIG[item.status]?.emoji || '📝'}
+                            {isActiveInstance(item.id) ? '⏳' : item.status === 'IN_PROGRESS' ? '⏸️' : STATUS_CONFIG[item.status]?.emoji || '📝'}
                           </span>
                         }
                         title={
@@ -891,6 +905,7 @@ const CheckInPage: React.FC = () => {
                           <span style={{ color: STATUS_CONFIG[item.status]?.color || '#b8929e' }}>
                             {isActiveInstance(item.id)
                               ? `进行中 ${formatElapsed(timerDisplay)}`
+                              : item.status === 'IN_PROGRESS' ? '已暂停'
                               : STATUS_CONFIG[item.status]?.label || '未知'}
                           </span>
                         }

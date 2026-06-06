@@ -22,7 +22,7 @@ public class TaskInstanceAction extends BaseEntity {
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 10, columnDefinition = "VARCHAR(10)")
     private ActionType actionType;
 
     private LocalDate originalDate;

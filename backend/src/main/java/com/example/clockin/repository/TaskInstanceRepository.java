@@ -19,7 +19,7 @@ public interface TaskInstanceRepository extends JpaRepository<TaskInstance, Long
 
     Optional<TaskInstance> findByTaskIdAndScheduledDateAndUserId(Long taskId, LocalDate date, Long userId);
 
-    @Query("SELECT ti FROM TaskInstance ti WHERE ti.userId = :userId AND ti.scheduledDate < :today AND ti.status <> 'COMPLETED' AND ti.status <> 'SKIPPED' ORDER BY ti.scheduledDate ASC")
+    @Query("SELECT ti FROM TaskInstance ti WHERE ti.userId = :userId AND ti.scheduledDate < :today AND ti.status <> 'COMPLETED' AND ti.status <> 'SKIPPED' AND ti.status <> 'DEFERRED' ORDER BY ti.scheduledDate ASC")
     List<TaskInstance> findOverdueInstances(@Param("userId") Long userId, @Param("today") LocalDate today);
 
     @Query("SELECT ti FROM TaskInstance ti WHERE ti.taskId = :taskId AND ti.userId = :userId ORDER BY ti.scheduledDate DESC")

@@ -65,7 +65,7 @@ export interface TaskInstance {
   repeatRule?: string;
   taskScheduledDate?: string;
   scheduledDate: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED';
+  status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED' | 'DEFERRED';
   deferCount?: number;
 }
 

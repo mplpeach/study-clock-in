@@ -137,9 +137,13 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
         }
 
         LocalDate originalDate = instance.getScheduledDate();
-        instance.setScheduledDate(originalDate.plusDays(1));
+        LocalDate newDate = originalDate.plusDays(1);
+
+        instance.setStatus(TaskInstanceStatus.DEFERRED);
         instance.setDeferCount(instance.getDeferCount() + 1);
         instanceRepository.save(instance);
+
+        createInstance(instance.getUserId(), instance.getTaskId(), newDate);
 
         TaskInstanceAction action = new TaskInstanceAction();
         action.setTaskInstanceId(instanceId);
@@ -147,7 +151,7 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
         action.setUserId(instance.getUserId());
         action.setActionType(ActionType.DEFER);
         action.setOriginalDate(originalDate);
-        action.setNewDate(instance.getScheduledDate());
+        action.setNewDate(newDate);
         actionRepository.save(action);
 
         return toDTO(instance);
