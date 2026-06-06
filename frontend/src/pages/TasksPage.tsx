@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined, CaretRightOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { taskApi, goalApi, instanceApi } from '../api';
+import { taskApi, goalApi, instanceApi, checkInApi } from '../api';
 import type { Task, Goal, TaskInstance } from '../api';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
@@ -29,6 +29,8 @@ const TasksPage: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [repeatRule, setRepeatRule] = useState<string>('NONE');
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [switchConfirmOpen, setSwitchConfirmOpen] = useState(false);
+  const [switchTaskId, setSwitchTaskId] = useState<number | null>(null);
   const [form] = Form.useForm();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -292,7 +294,19 @@ const TasksPage: React.FC = () => {
                 return (
                   <Button type="link" style={{ color: disabled ? '#ccc' : '#2ed573' }} icon={<CaretRightOutlined />} size="small"
                     disabled={disabled} title={tooltip}
-                    onClick={() => navigate(`/checkin?autoStartTaskId=${record.id}`)}>
+                    onClick={async () => {
+                      try {
+                        const active = await checkInApi.hasActive();
+                        if (active) {
+                          setSwitchTaskId(record.id);
+                          setSwitchConfirmOpen(true);
+                        } else {
+                          navigate(`/checkin?autoStartTaskId=${record.id}`);
+                        }
+                      } catch {
+                        navigate(`/checkin?autoStartTaskId=${record.id}`);
+                      }
+                    }}>
                     开始
                   </Button>
                 );
@@ -423,6 +437,33 @@ const TasksPage: React.FC = () => {
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
         {renderTabContent(activeTab)}
       </Card>
+
+      {/* 切换任务确认 Modal */}
+      <Modal
+        className="cute-modal"
+        title="切换任务"
+        open={switchConfirmOpen}
+        onOk={() => {
+          setSwitchConfirmOpen(false);
+          navigate(`/checkin?autoStartTaskId=${switchTaskId}&switch=1`);
+        }}
+        onCancel={() => {
+          setSwitchConfirmOpen(false);
+          setSwitchTaskId(null);
+        }}
+        okText="切换"
+        cancelText="取消"
+        centered
+        okButtonProps={{ style: { borderRadius: 20, background: '#ffa502', borderColor: '#ffa502' } }}
+        cancelButtonProps={{ style: { borderRadius: 20 } }}
+      >
+        <div style={{ color: '#5a3d4a', fontSize: 14, lineHeight: 1.8 }}>
+          <p>当前有进行中的任务，确定要切换吗？</p>
+          <p style={{ fontSize: 13, color: '#b8929e' }}>
+            切换后需要记录上一个任务的学习内容。
+          </p>
+        </div>
+      </Modal>
 
       {/* 新建/编辑任务 Modal */}
       <Modal className="cute-modal" title={editingTask ? '编辑任务' : '新建任务'} open={modalOpen} onOk={handleSubmit} onCancel={() => setModalOpen(false)} width={520}>

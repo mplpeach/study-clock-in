@@ -11,6 +11,8 @@ public interface CheckInRecordRepository extends JpaRepository<CheckInRecord, Lo
 
     List<CheckInRecord> findByTaskInstanceId(Long taskInstanceId);
 
+    java.util.List<CheckInRecord> findByUserIdAndEndTimeIsNull(Long userId);
+
     List<CheckInRecord> findByUserIdAndStartTimeBetween(Long userId, LocalDateTime start, LocalDateTime end);
 
     List<CheckInRecord> findByUserIdOrderByStartTimeDesc(Long userId);

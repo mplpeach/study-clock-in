@@ -148,6 +148,11 @@ public class CheckInServiceImpl implements CheckInService {
                 .map(this::toDTO).collect(Collectors.toList());
     }
 
+    @Override
+    public boolean hasActiveCheckIn(Long userId) {
+        return !recordRepository.findByUserIdAndEndTimeIsNull(userId).isEmpty();
+    }
+
     private void saveImages(Long recordId, List<MultipartFile> images) {
         for (MultipartFile file : images) {
             String filePath = fileStorageService.upload(file);

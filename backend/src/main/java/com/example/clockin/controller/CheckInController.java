@@ -38,6 +38,11 @@ public class CheckInController {
         return ApiResponse.success(checkInService.manualCheckIn(DEFAULT_USER_ID, request, images));
     }
 
+    @GetMapping("/has-active")
+    public ApiResponse<Boolean> hasActive() {
+        return ApiResponse.success(checkInService.hasActiveCheckIn(DEFAULT_USER_ID));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<CheckInDTO> getById(@PathVariable Long id) {
         return ApiResponse.success(checkInService.getCheckInRecord(id));

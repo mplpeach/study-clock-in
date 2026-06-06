@@ -376,6 +376,7 @@ const CheckInPage: React.FC = () => {
 
     if (activeRecordId !== null) {
       searchParams.delete('autoStartTaskId');
+      searchParams.delete('switch');
       setSearchParams(searchParams, { replace: true });
       setPendingTaskId(taskId);
       stopTimer();
@@ -439,13 +440,6 @@ const CheckInPage: React.FC = () => {
       message.error(e?.message || '启动任务失败');
     }
     setPendingTaskId(null);
-  };
-
-  const handleSwitchCancel = () => {
-    setSwitchModalOpen(false);
-    setPendingTaskId(null);
-    switchForm.resetFields();
-    startTimer();
   };
 
   // ===== 暂停（提交内容 + 时长，但不完成实例） =====
@@ -1403,12 +1397,17 @@ const CheckInPage: React.FC = () => {
         </DndContext>
       </Modal>
 
-      {/* ===== 切换任务确认 Modal ===== */}
-      <Modal className="cute-modal" title="切换任务" open={switchModalOpen}
-        onOk={handleSwitchConfirm} onCancel={handleSwitchCancel}
-        okText="确认切换" cancelText="取消">
+      {/* ===== 切换任务 — 强制记录内容 Modal ===== */}
+      <Modal className="cute-modal" title="请记录上一个学习任务的学习内容" open={switchModalOpen}
+        onOk={handleSwitchConfirm}
+        okText="提交"
+        maskClosable={false}
+        keyboard={false}
+        closable={false}
+        cancelButtonProps={{ style: { display: 'none' } }}
+      >
         <div style={{ marginBottom: 16, color: '#5a3d4a' }}>
-          <p>当前有进行中的任务，切换前请记录学习内容。</p>
+          <p>切换任务前，请记录上一个任务的学习内容。</p>
           <p style={{ fontSize: 13, color: '#b8929e' }}>
             当前已用时：{formatElapsed(timerDisplay)}
           </p>

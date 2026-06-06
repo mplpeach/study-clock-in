@@ -43,6 +43,12 @@ User ─→ Goal ─←→─ Task（可复用的任务定义）
 - 所有 Entity 继承 `BaseEntity`（id、createdAt、updatedAt）。JPA `ddl-auto: update` 管理建表。
 - DTO 使用内部静态类作为请求对象（如 `CheckInDTO.StartRequest`）。
 
+### 数据库操作红线
+
+- **任何不可逆操作（UPDATE、DELETE、DROP、ALTER 等）必须先在终端展示影响范围，等用户确认后才能执行。**
+- 只能直接执行完全可还原的操作。不确定是否可逆的，先问。
+- 排查数据问题用 SELECT 展示，不要直接用 UPDATE/DELETE 修复。
+
 ### 前端约定
 
 - `api/client.ts` 响应拦截器解包 `ApiResponse`：校验 `code === 200`，返回 `res.data`。所有 API 函数直接拿到解包后的数据。

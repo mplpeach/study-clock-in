@@ -135,6 +135,7 @@ export const checkInApi = {
   getByInstance: (instanceId: number) =>
     client.get<any, CheckInRecord[]>(`/checkins/by-instance/${instanceId}`),
   getAll: () => client.get<any, CheckInRecord[]>('/checkins'),
+  hasActive: () => client.get<any, boolean>('/checkins/has-active'),
 };
 
 export interface GoalStats {
