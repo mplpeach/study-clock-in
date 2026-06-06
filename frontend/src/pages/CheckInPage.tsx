@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-  Card, Button, Modal, Form, Input, Select, TimePicker, message, Row, Col,
+  Card, Button, Checkbox, Modal, Form, Input, Select, TimePicker, message, Row, Col,
   Tag, Empty, Upload, List, Space, Typography, Divider,
 } from 'antd';
 import {
@@ -280,7 +280,15 @@ const CheckInPage: React.FC = () => {
     if (startTaskType === 'existing') {
       taskId = values.taskId;
     } else {
-      const task = await taskApi.create({ name: values.name, description: values.description });
+      const task = await taskApi.create({
+        name: values.name,
+        description: values.description,
+        repeatRule: values.repeatRule || 'NONE',
+        scheduledDate: (!values.repeatRule || values.repeatRule === 'NONE') ? today : undefined,
+        weeklyDays: values.repeatRule === 'WEEKLY' && values.weeklyDays?.length
+          ? values.weeklyDays.sort().join(',')
+          : undefined,
+      });
       if (values.goalIds?.length) {
         await taskApi.updateGoals(task.id, values.goalIds);
       }
@@ -464,7 +472,15 @@ const CheckInPage: React.FC = () => {
     if (manualTaskType === 'existing') {
       taskId = values.taskId;
     } else {
-      const task = await taskApi.create({ name: values.name, description: values.description });
+      const task = await taskApi.create({
+        name: values.name,
+        description: values.description,
+        repeatRule: values.repeatRule || 'NONE',
+        scheduledDate: (!values.repeatRule || values.repeatRule === 'NONE') ? today : undefined,
+        weeklyDays: values.repeatRule === 'WEEKLY' && values.weeklyDays?.length
+          ? values.weeklyDays.sort().join(',')
+          : undefined,
+      });
       if (values.goalIds?.length) {
         await taskApi.updateGoals(task.id, values.goalIds);
       }
@@ -531,6 +547,7 @@ const CheckInPage: React.FC = () => {
   const renderTaskPicker = (
     taskType: 'existing' | 'new',
     onTypeChange: (v: 'existing' | 'new') => void,
+    form: any,
   ) => (
     <>
       <Form.Item label="选择方式" style={{ marginBottom: 12 }}>
@@ -567,6 +584,38 @@ const CheckInPage: React.FC = () => {
             <Select placeholder="选择目标（可选，可多选）" allowClear mode="multiple" maxTagCount={2} className="cute-input">
               {goals.map((g) => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}
             </Select>
+          </Form.Item>
+          <Form.Item name="repeatRule" label="重复规则" initialValue="NONE">
+            <Select
+              className="cute-input"
+              options={[
+                { label: '不重复', value: 'NONE' },
+                { label: '每天', value: 'DAILY' },
+                { label: '每周', value: 'WEEKLY' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, cur) => prev.repeatRule !== cur.repeatRule}
+          >
+            {({ getFieldValue }) =>
+              getFieldValue('repeatRule') === 'WEEKLY' ? (
+                <Form.Item name="weeklyDays" label="选择星期">
+                  <Checkbox.Group
+                    options={[
+                      { label: '周一', value: 1 },
+                      { label: '周二', value: 2 },
+                      { label: '周三', value: 3 },
+                      { label: '周四', value: 4 },
+                      { label: '周五', value: 5 },
+                      { label: '周六', value: 6 },
+                      { label: '周日', value: 7 },
+                    ]}
+                  />
+                </Form.Item>
+              ) : null
+            }
           </Form.Item>
         </>
       )}
@@ -1002,7 +1051,7 @@ const CheckInPage: React.FC = () => {
         onOk={handleStartSubmit} onCancel={() => setStartModalOpen(false)}
         okText="开始学习">
         <Form form={startForm} layout="vertical">
-          {renderTaskPicker(startTaskType, setStartTaskType)}
+          {renderTaskPicker(startTaskType, setStartTaskType, startForm)}
         </Form>
       </Modal>
 
@@ -1054,7 +1103,7 @@ const CheckInPage: React.FC = () => {
           {renderTaskPicker(manualTaskType, (v) => {
             setManualTaskType(v);
             manualForm.resetFields();
-          })}
+          }, manualForm)}
 
           <Form.Item name="timeRange" label="学习时间段" style={{ marginBottom: 12 }}>
             <TimePicker.RangePicker
