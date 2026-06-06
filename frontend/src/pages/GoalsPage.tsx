@@ -251,29 +251,48 @@ const GoalsPage: React.FC = () => {
               ) : (
                 <List
                   loading={tasksLoading}
-                  dataSource={selectedTasks}
-                  renderItem={(task) => (
-                    <List.Item
-                      actions={[
-                        <Button type="text" icon={<EditOutlined />}
-                          onClick={() => openTaskEdit(task)} key="edit" />,
-                        <Button type="text" danger icon={<DeleteOutlined />}
-                          onClick={() => handleTaskDelete(task.id)} key="delete" />,
-                      ]}
-                    >
-                      <List.Item.Meta
-                        title={task.name}
-                        description={
-                          <Space size={4} wrap>
-                            {task.repeatRule === 'DAILY' && <Tag color="#4ecdc4">每天</Tag>}
-                            {task.repeatRule === 'WEEKLY' && <Tag color="#a29bfe">每周</Tag>}
-                            {task.scheduledDate && <Tag>{dayjs(task.scheduledDate).format('M月D日')}</Tag>}
-                            {task.description && <span style={{ color: '#b8929e', fontSize: 13 }}>{task.description}</span>}
-                          </Space>
-                        }
-                      />
-                    </List.Item>
-                  )}
+                  dataSource={[...selectedTasks].sort((a, b) => {
+                    if (a.status === 'COMPLETED' && b.status !== 'COMPLETED') return 1;
+                    if (a.status !== 'COMPLETED' && b.status === 'COMPLETED') return -1;
+                    return 0;
+                  })}
+                  renderItem={(task) => {
+                    const isCompleted = task.status === 'COMPLETED';
+                    return (
+                      <List.Item
+                        style={{ opacity: isCompleted ? 0.5 : 1, borderBottom: '2px solid #ffe0e6', padding: '12px 0' }}
+                        actions={[
+                          <Button type="text" icon={<EditOutlined />}
+                            onClick={() => openTaskEdit(task)} key="edit" />,
+                          <Button type="text" danger icon={<DeleteOutlined />}
+                            onClick={() => handleTaskDelete(task.id)} key="delete" />,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          title={
+                            <Space>
+                              <span style={{
+                                color: isCompleted ? '#b8929e' : '#5a3d4a',
+                                fontWeight: isCompleted ? 400 : 600,
+                                textDecoration: isCompleted ? 'line-through' : 'none',
+                              }}>
+                                {task.name}
+                              </span>
+                              {isCompleted && <Tag color="success" style={{ fontSize: 11 }}>已完成</Tag>}
+                            </Space>
+                          }
+                          description={
+                            <Space size={4} wrap>
+                              {task.repeatRule === 'DAILY' && <Tag color="#4ecdc4">每天</Tag>}
+                              {task.repeatRule === 'WEEKLY' && <Tag color="#a29bfe">每周</Tag>}
+                              {task.scheduledDate && <Tag>{dayjs(task.scheduledDate).format('M月D日')}</Tag>}
+                              {task.description && <span style={{ color: '#b8929e', fontSize: 13 }}>{task.description}</span>}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    );
+                  }}
                 />
               )}
             </Card>
