@@ -197,7 +197,14 @@ const GoalsPage: React.FC = () => {
                       />
                       <div style={{ marginTop: 12 }}>
                         {goal.tasks?.length > 0 ? (
-                          goal.tasks.map((t) => <Tag className="cute-tag" color="#ff6b81" key={t.id}>{t.name}</Tag>)
+                          (<Space size={[4, 6]} wrap>
+                            {goal.tasks.slice(0, 4).map((t) => (
+                              <Tag className="cute-tag" color="#ff6b81" key={t.id}>{t.name}</Tag>
+                            ))}
+                            {goal.tasks.length > 4 && (
+                              <Tag className="cute-tag" color="#b8929e">+{goal.tasks.length - 4}</Tag>
+                            )}
+                          </Space>)
                         ) : (
                           <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
                         )}
