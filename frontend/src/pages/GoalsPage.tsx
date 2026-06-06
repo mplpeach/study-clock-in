@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, Button, Modal, Form, Input, Row, Col, Tag, Empty, Popconfirm, message,
+  Card, Button, Modal, Form, Input, Row, Col, Tag, Empty, message,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { goalApi } from '../api';
@@ -86,9 +86,24 @@ const GoalsPage: React.FC = () => {
                   <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(goal)} key="edit">
                     编辑
                   </Button>,
-                  <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(goal.id)} key="delete">
-                    <Button type="text" danger icon={<DeleteOutlined />}>删除</Button>
-                  </Popconfirm>,
+                  <Button type="text" danger icon={<DeleteOutlined />} key="delete"
+                    onClick={() => {
+                      Modal.confirm({
+                        icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                        title: '确定删除这个目标吗？',
+                        content: '删除目标不会删除关联的任务。',
+                        className: 'cute-modal',
+                        centered: true,
+                        okText: '确定',
+                        cancelText: '取消',
+                        okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                        cancelButtonProps: { style: { borderRadius: 20 } },
+                        onOk: () => handleDelete(goal.id),
+                      });
+                    }}
+                  >
+                    删除
+                  </Button>,
                 ]}
               >
                 <Card.Meta

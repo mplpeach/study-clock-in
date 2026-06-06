@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Card, Calendar, Badge, Modal, List, Tag, Button, message, Empty, Row, Col, Popconfirm,
+  Card, Calendar, Badge, Modal, List, Tag, Button, message, Empty, Row, Col,
 } from 'antd';
 import { DeleteOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
@@ -161,9 +161,21 @@ const CalendarPage: React.FC = () => {
             renderItem={(item) => (
               <List.Item className="log-row"
                 actions={[
-                  <Popconfirm title="确定删除？" onConfirm={() => handleDeleteInstance(item.id)}>
-                    <Button type="text" danger icon={<DeleteOutlined />} />
-                  </Popconfirm>,
+                  <Button type="text" danger icon={<DeleteOutlined />}
+                    onClick={() => {
+                      Modal.confirm({
+                        icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                        title: '确定删除这条任务吗？',
+                        className: 'cute-modal',
+                        centered: true,
+                        okText: '确定',
+                        cancelText: '取消',
+                        okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                        cancelButtonProps: { style: { borderRadius: 20 } },
+                        onOk: () => handleDeleteInstance(item.id),
+                      });
+                    }}
+                  />,
                 ]}
               >
                 <List.Item.Meta
