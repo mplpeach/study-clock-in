@@ -21,10 +21,11 @@ const { TextArea } = Input;
 const { Dragger } = Upload;
 const { Text } = Typography;
 
-const emojiMap: Record<string, string> = {
-  TODO: '📝',
-  IN_PROGRESS: '⏳',
-  COMPLETED: '✅',
+const STATUS_CONFIG: Record<string, { emoji: string; label: string; color: string }> = {
+  TODO:         { emoji: '📝', label: '待开始', color: '#b8929e' },
+  IN_PROGRESS:  { emoji: '⏳', label: '进行中', color: '#ffa502' },
+  COMPLETED:    { emoji: '✅', label: '已完成', color: '#2ed573' },
+  SKIPPED:      { emoji: '⏭️', label: '已跳过', color: '#b8929e' },
 };
 
 interface GoalGroup {
@@ -571,13 +572,6 @@ const CheckInPage: React.FC = () => {
     </>
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED': return '#2ed573';
-      case 'IN_PROGRESS': return '#ffa502';
-      default: return '#b8929e';
-    }
-  };
 
   // 判断当前活跃任务是否就是这个实例
   const isActiveInstance = (instanceId: number) =>
@@ -686,8 +680,19 @@ const CheckInPage: React.FC = () => {
                         isActiveInstance(item.id)
                           ? []
                           : [
-                              ...(item.status !== 'COMPLETED'
+                              ...(item.status === 'COMPLETED'
                                 ? [
+                                  <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
+                                    已完成 ✓
+                                  </Tag>,
+                                ]
+                                : item.status === 'SKIPPED'
+                                ? [
+                                  <Tag className="cute-tag" color="default" style={{ padding: '4px 12px' }} key="skipped">
+                                    已跳过
+                                  </Tag>,
+                                ]
+                                : [
                                   <Button
                                     className="cute-btn"
                                     type="primary"
@@ -702,11 +707,6 @@ const CheckInPage: React.FC = () => {
                                   >
                                     {item.status === 'IN_PROGRESS' ? '继续学习' : '开始学习'}
                                   </Button>,
-                                ]
-                                : [
-                                  <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
-                                    已完成 ✓
-                                  </Tag>,
                                 ]),
                               <Button
                                 type="link"
@@ -734,7 +734,7 @@ const CheckInPage: React.FC = () => {
                       <List.Item.Meta
                         avatar={
                           <span style={{ fontSize: 20 }}>
-                            {isActiveInstance(item.id) ? '⏳' : emojiMap[item.status] || '📝'}
+                            {isActiveInstance(item.id) ? '⏳' : STATUS_CONFIG[item.status]?.emoji || '📝'}
                           </span>
                         }
                         title={
@@ -767,12 +767,11 @@ const CheckInPage: React.FC = () => {
                           </Space>
                         }
                         description={
-                          <span style={{ color: getStatusColor(item.status) }}>
+                          <span style={{ color: STATUS_CONFIG[item.status]?.color || '#b8929e' }}>
                             {isActiveInstance(item.id)
                               ? `进行中 ${formatElapsed(timerDisplay)}`
                               : item.status === 'TODO' ? '待补做'
-                              : item.status === 'IN_PROGRESS' ? '进行中'
-                              : '已完成'}
+                              : STATUS_CONFIG[item.status]?.label || '未知'}
                           </span>
                         }
                       />
@@ -821,6 +820,12 @@ const CheckInPage: React.FC = () => {
                                     继续学习
                                   </Button>,
                                 ]
+                                : item.status === 'SKIPPED'
+                                ? [
+                                  <Tag className="cute-tag" color="default" style={{ padding: '4px 12px' }} key="skipped">
+                                    已跳过
+                                  </Tag>,
+                                ]
                                 : [
                                   <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
                                     已完成 ✓
@@ -854,7 +859,7 @@ const CheckInPage: React.FC = () => {
                       <List.Item.Meta
                         avatar={
                           <span style={{ fontSize: 20 }}>
-                            {isActiveInstance(item.id) ? '⏳' : emojiMap[item.status] || '📝'}
+                            {isActiveInstance(item.id) ? '⏳' : STATUS_CONFIG[item.status]?.emoji || '📝'}
                           </span>
                         }
                         title={
@@ -883,12 +888,10 @@ const CheckInPage: React.FC = () => {
                           </Space>
                         }
                         description={
-                          <span style={{ color: getStatusColor(item.status) }}>
+                          <span style={{ color: STATUS_CONFIG[item.status]?.color || '#b8929e' }}>
                             {isActiveInstance(item.id)
                               ? `进行中 ${formatElapsed(timerDisplay)}`
-                              : item.status === 'TODO' ? '待开始'
-                              : item.status === 'IN_PROGRESS' ? '进行中'
-                              : '已完成'}
+                              : STATUS_CONFIG[item.status]?.label || '未知'}
                           </span>
                         }
                       />
@@ -1207,13 +1210,12 @@ const CheckInPage: React.FC = () => {
                   detailInstance.status === 'COMPLETED' ? 'success' :
                   detailInstance.status === 'IN_PROGRESS' ? 'warning' : 'default'
                 } style={{ fontSize: 13, padding: '2px 12px' }}>
-                  {detailInstance.status === 'COMPLETED' ? '✅ 已完成' :
-                   detailInstance.status === 'IN_PROGRESS' ? '⏳ 进行中' : '📝 待开始'}
+                  {STATUS_CONFIG[detailInstance.status]?.emoji + ' ' + STATUS_CONFIG[detailInstance.status]?.label || detailInstance.status}
                 </Tag>
               </div>
             </div>
 
-            {detailInstance.status !== 'COMPLETED' && (
+            {detailInstance.status !== 'COMPLETED' && detailInstance.status !== 'SKIPPED' && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #fef0f3' }}>
                 {detailInstance.repeatRule === 'NONE' ? (
                   <Button

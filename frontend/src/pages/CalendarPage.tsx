@@ -173,12 +173,14 @@ const CalendarPage: React.FC = () => {
                       {item.goalName && <Tag className="cute-tag" color="#a29bfe">{item.goalName}</Tag>}
                       <Tag className="cute-tag"
                         color={item.status === 'COMPLETED' ? '#2ed573' :
-                               item.status === 'IN_PROGRESS' ? '#ffa502' : '#b8929e'}
+                               item.status === 'IN_PROGRESS' ? '#ffa502' :
+                               item.status === 'SKIPPED' ? '#b8929e' : '#b8929e'}
                       >
                         {item.status === 'TODO' ? '待开始' :
-                         item.status === 'IN_PROGRESS' ? '进行中' : '已完成'}
+                         item.status === 'IN_PROGRESS' ? '进行中' :
+                         item.status === 'SKIPPED' ? '已跳过' : '已完成'}
                       </Tag>
-                      {isOverdue(item.scheduledDate) && item.status !== 'COMPLETED' && (
+                      {isOverdue(item.scheduledDate) && item.status !== 'COMPLETED' && item.status !== 'SKIPPED' && (
                         <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
                       )}
                     </div>
