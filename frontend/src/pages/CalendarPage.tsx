@@ -60,7 +60,7 @@ const CalendarPage: React.FC = () => {
     const completed = instances.filter((i) => i.status === 'COMPLETED').length;
 
     return (
-      <div style={{ marginTop: 4 }}>
+      <div>
         {completed > 0 ? (
           <Badge count={completed} style={{
             backgroundColor: '#ff6b81',
