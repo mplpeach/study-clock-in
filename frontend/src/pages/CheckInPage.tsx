@@ -92,6 +92,9 @@ const CheckInPage: React.FC = () => {
 
   const [reorderModalOpen, setReorderModalOpen] = useState(false);
   const [sortedGoals, setSortedGoals] = useState<Goal[]>([]);
+  const [switchModalOpen, setSwitchModalOpen] = useState(false);
+  const [pendingTaskId, setPendingTaskId] = useState<number | null>(null);
+  const [switchForm] = Form.useForm();
   const [toolPanelOpen, setToolPanelOpen] = useState(false);
 
   const sensors = useSensors(
@@ -365,18 +368,27 @@ const CheckInPage: React.FC = () => {
   // ===== 从任务页跳转过来，自动开始任务 =====
   useEffect(() => {
     const taskIdStr = searchParams.get('autoStartTaskId');
-    if (!taskIdStr || tasks.length === 0 || activeRecordId !== null) return;
+    if (!taskIdStr || tasks.length === 0 || !hasRestored) return;
 
     const taskId = Number(taskIdStr);
     const task = tasks.find((t) => t.id === taskId);
     if (!task || task.status === 'COMPLETED') return;
+
+    if (activeRecordId !== null) {
+      searchParams.delete('autoStartTaskId');
+      setSearchParams(searchParams, { replace: true });
+      setPendingTaskId(taskId);
+      stopTimer();
+      switchForm.resetFields();
+      setSwitchModalOpen(true);
+      return;
+    }
 
     searchParams.delete('autoStartTaskId');
     setSearchParams(searchParams, { replace: true });
 
     (async () => {
       try {
-        // 单次任务 + 未来 scheduledDate：把未来实例挪到今天（删旧 + 建新）
         if (task.repeatRule === 'NONE' && task.scheduledDate && task.scheduledDate > today) {
           try {
             const futureInstances = await instanceApi.getByDate(task.scheduledDate);
@@ -393,7 +405,48 @@ const CheckInPage: React.FC = () => {
         message.error(e?.message || '启动任务失败');
       }
     })();
-  }, [tasks, todayInstances]);
+  }, [tasks, todayInstances, hasRestored]);
+
+  // ===== 切换任务处理 =====
+  const handleSwitchConfirm = async () => {
+    const values = await switchForm.validateFields();
+    const durationSeconds = Math.floor((Date.now() - recordStartTimeRef.current) / 1000);
+    try {
+      await checkInApi.end(activeRecordId!, {
+        content: values.content,
+        complete: false,
+        durationSeconds,
+      });
+    } catch { /* 非关键 */ }
+
+    clearActive();
+    setSwitchModalOpen(false);
+    switchForm.resetFields();
+
+    try {
+      const task = tasks.find((t) => t.id === pendingTaskId);
+      if (task && task.repeatRule === 'NONE' && task.scheduledDate && task.scheduledDate > today) {
+        try {
+          const futureInstances = await instanceApi.getByDate(task.scheduledDate);
+          const futureInstance = futureInstances.find((i) => i.taskId === pendingTaskId);
+          if (futureInstance) await instanceApi.delete(futureInstance.id);
+        } catch { /* 非关键 */ }
+      }
+      const instance = await resolveInstance(pendingTaskId!);
+      await handleResume(instance.id);
+      message.success('已切换任务 💪');
+    } catch (e: any) {
+      message.error(e?.message || '启动任务失败');
+    }
+    setPendingTaskId(null);
+  };
+
+  const handleSwitchCancel = () => {
+    setSwitchModalOpen(false);
+    setPendingTaskId(null);
+    switchForm.resetFields();
+    startTimer();
+  };
 
   // ===== 暂停（提交内容 + 时长，但不完成实例） =====
   const handlePause = async () => {
@@ -1348,6 +1401,23 @@ const CheckInPage: React.FC = () => {
             ))}
           </SortableContext>
         </DndContext>
+      </Modal>
+
+      {/* ===== 切换任务确认 Modal ===== */}
+      <Modal className="cute-modal" title="切换任务" open={switchModalOpen}
+        onOk={handleSwitchConfirm} onCancel={handleSwitchCancel}
+        okText="确认切换" cancelText="取消">
+        <div style={{ marginBottom: 16, color: '#5a3d4a' }}>
+          <p>当前有进行中的任务，切换前请记录学习内容。</p>
+          <p style={{ fontSize: 13, color: '#b8929e' }}>
+            当前已用时：{formatElapsed(timerDisplay)}
+          </p>
+        </div>
+        <Form form={switchForm} layout="vertical">
+          <Form.Item name="content" label="📖 学了什么">
+            <TextArea className="cute-input" rows={4} placeholder="记录一下刚刚学了什么..." />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

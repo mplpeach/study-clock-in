@@ -5,8 +5,8 @@ import {
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined, CaretRightOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { taskApi, goalApi } from '../api';
-import type { Task, Goal } from '../api';
+import { taskApi, goalApi, instanceApi } from '../api';
+import type { Task, Goal, TaskInstance } from '../api';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const { Panel } = Collapse;
@@ -22,6 +22,7 @@ interface GoalGroup {
 const TasksPage: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [todayInstances, setTodayInstances] = useState<TaskInstance[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -53,9 +54,12 @@ const TasksPage: React.FC = () => {
     setGoals(data);
   };
 
+  const today = dayjs().format('YYYY-MM-DD');
+
   useEffect(() => {
     fetchTasks();
     fetchGoals();
+    instanceApi.getByDate(today).then(setTodayInstances).catch(() => {});
   }, [goalIdFilter]);
 
   const handleSearch = async () => {
@@ -194,6 +198,8 @@ const TasksPage: React.FC = () => {
 
   // ---- 内部表格列（精简，去掉「关联目标」列，目标信息已在面板标题体现） ----
 
+  const instanceMap = new Map(todayInstances.map((i) => [i.taskId, i]));
+
   const innerColumns = [
     {
       title: '任务名称',
@@ -272,10 +278,25 @@ const TasksPage: React.FC = () => {
             </>
           ) : (
             <>
-              <Button type="link" style={{ color: '#2ed573' }} icon={<CaretRightOutlined />} size="small"
-                onClick={() => navigate(`/checkin?autoStartTaskId=${record.id}`)}>
-                开始
-              </Button>
+              {(() => {
+                const inst = instanceMap.get(record.id);
+                const isFuture = record.repeatRule === 'NONE' && record.scheduledDate && record.scheduledDate > today;
+                if (inst?.status === 'COMPLETED') {
+                  return <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }}>已完成 ✓</Tag>;
+                }
+                const disabled = isFuture || inst?.status === 'SKIPPED' || inst?.status === 'DEFERRED';
+                const tooltip = isFuture ? '未到安排日期'
+                  : inst?.status === 'SKIPPED' ? '今日已跳过'
+                  : inst?.status === 'DEFERRED' ? '已延期至明天'
+                  : '';
+                return (
+                  <Button type="link" style={{ color: disabled ? '#ccc' : '#2ed573' }} icon={<CaretRightOutlined />} size="small"
+                    disabled={disabled} title={tooltip}
+                    onClick={() => navigate(`/checkin?autoStartTaskId=${record.id}`)}>
+                    开始
+                  </Button>
+                );
+              })()}
               <Button type="link" style={{ color: '#8c6f7a' }} icon={<EditOutlined />} size="small" onClick={() => openEdit(record)}>编辑</Button>
               {isRecurring(record) ? (
                 <Button type="link" style={{ color: '#ffa502' }} icon={<StopOutlined />} size="small"
