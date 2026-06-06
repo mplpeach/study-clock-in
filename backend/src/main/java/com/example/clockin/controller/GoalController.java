@@ -41,6 +41,12 @@ public class GoalController {
         return ApiResponse.success(goalService.updateGoal(id, request));
     }
 
+    @PutMapping("/reorder")
+    public ApiResponse<Void> reorder(@RequestBody GoalDTO.ReorderRequest request) {
+        goalService.reorderGoals(request);
+        return ApiResponse.success();
+    }
+
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         goalService.deleteGoal(id);

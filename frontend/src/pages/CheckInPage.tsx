@@ -6,11 +6,16 @@ import {
 import {
   PlayCircleOutlined, PauseCircleOutlined,
   HistoryOutlined, InboxOutlined, DeleteOutlined, InfoCircleOutlined,
+  MenuOutlined, SettingOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
 import { instanceApi, checkInApi, taskApi, goalApi } from '../api';
 import type { TaskInstance, Task, Goal } from '../api';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const { TextArea } = Input;
 const { Dragger } = Upload;
@@ -30,6 +35,26 @@ interface GoalGroup {
   todayItems: TaskInstance[];
   overdueItems: TaskInstance[];
 }
+
+const SortableGoalItem: React.FC<{ id: number; goal: Goal }> = ({ id, goal }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`sort-item${isDragging ? ' dragging' : ''}`} {...attributes}>
+      <span className="sort-item-handle" {...listeners}>
+        <MenuOutlined />
+      </span>
+      <span className="goal-color-dot" style={{ background: goal.color }} />
+      <span className="sort-item-name">{goal.name}</span>
+    </div>
+  );
+};
 
 const CheckInPage: React.FC = () => {
   const [todayInstances, setTodayInstances] = useState<TaskInstance[]>([]);
@@ -61,6 +86,15 @@ const CheckInPage: React.FC = () => {
   const [manualTaskType, setManualTaskType] = useState<'existing' | 'new'>('existing');
   const [manualForm] = Form.useForm();
   const [manualFiles, setManualFiles] = useState<File[]>([]);
+
+  const [reorderModalOpen, setReorderModalOpen] = useState(false);
+  const [sortedGoals, setSortedGoals] = useState<Goal[]>([]);
+  const [toolPanelOpen, setToolPanelOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const today = dayjs().format('YYYY-MM-DD');
   const [searchParams, setSearchParams] = useSearchParams();
@@ -423,6 +457,36 @@ const CheckInPage: React.FC = () => {
     setManualModalOpen(true);
   };
 
+  // ===== 目标排序 =====
+  const openReorderModal = () => {
+    const sorted = [...goals].sort((a, b) => a.sortOrder - b.sortOrder);
+    setSortedGoals(sorted);
+    setReorderModalOpen(true);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setSortedGoals((prev) => {
+      const oldIndex = prev.findIndex((g) => g.id === active.id);
+      const newIndex = prev.findIndex((g) => g.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
+
+  const handleReorderSave = async () => {
+    try {
+      const items = sortedGoals.map((g, i) => ({ id: g.id, sortOrder: i }));
+      await goalApi.reorder(items);
+      message.success('排序已保存~ 📐');
+      setReorderModalOpen(false);
+      fetchData();
+    } catch (e: any) {
+      message.error(e?.message || '保存失败');
+    }
+  };
+
   // ===== 共享任务选择区 =====
   const renderTaskPicker = (
     taskType: 'existing' | 'new',
@@ -550,10 +614,12 @@ const CheckInPage: React.FC = () => {
         </Col>
       </Row>
 
-      {groupedGoals.length === 0 ? (
-        <Empty description="今天还没有任务，点击上方按钮开始学习吧~ 🌸" />
-      ) : (
-        groupedGoals.map((group) => (
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {groupedGoals.length === 0 ? (
+            <Empty description="今天还没有任务，点击上方按钮开始学习吧~ 🌸" />
+          ) : (
+            groupedGoals.map((group) => (
           <Card
             key={group.goalId ?? 'unclassified'}
             className="goal-block-card"
@@ -833,8 +899,47 @@ const CheckInPage: React.FC = () => {
               );
             })()}
           </Card>
-        ))
-      )}
+            ))
+          )}
+        </div>
+
+        {goals.length > 0 && (
+          <Card
+            size="small"
+            className={`tool-panel${toolPanelOpen ? ' open' : ''}`}
+            styles={{ body: { padding: toolPanelOpen ? '12px' : '8px' } }}
+            style={{
+              width: toolPanelOpen ? 170 : 44,
+              flexShrink: 0,
+              transition: 'width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              overflow: 'hidden',
+              position: 'sticky',
+              top: 80,
+            }}
+          >
+            <div
+              onClick={() => setToolPanelOpen(!toolPanelOpen)}
+              style={{ cursor: 'pointer', textAlign: 'center', userSelect: 'none' }}
+            >
+              <SettingOutlined style={{ color: '#a29bfe', fontSize: 16 }} />
+              {toolPanelOpen && (
+                <div style={{ color: '#5a3d4a', fontSize: 13, fontWeight: 600, marginTop: 6 }}>
+                  工具
+                </div>
+              )}
+            </div>
+            {toolPanelOpen && (
+              <>
+                <div style={{ margin: '12px 0 0', height: 1, background: '#fef0f3' }} />
+                <div className="tool-item" onClick={openReorderModal}>
+                  <MenuOutlined style={{ color: '#a29bfe', fontSize: 13 }} />
+                  <span>调整排序</span>
+                </div>
+              </>
+            )}
+          </Card>
+        )}
+      </div>
 
       {/* ===== 开始学习 Modal ===== */}
       <Modal className="cute-modal" title="▶️ 开始学习" open={startModalOpen}
@@ -1110,6 +1215,35 @@ const CheckInPage: React.FC = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* ===== 调整排序 Modal ===== */}
+      <Modal
+        className="cute-modal"
+        title="📐 调整目标排序"
+        open={reorderModalOpen}
+        onOk={handleReorderSave}
+        onCancel={() => setReorderModalOpen(false)}
+        okText="保存排序"
+        cancelText="取消"
+      >
+        <p style={{ color: '#b8929e', fontSize: 13, marginBottom: 16 }}>
+          拖拽目标调整顺序，靠前的目标将优先展示在打卡页顶部。
+        </p>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={sortedGoals.map((g) => g.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {sortedGoals.map((goal) => (
+              <SortableGoalItem key={goal.id} id={goal.id} goal={goal} />
+            ))}
+          </SortableContext>
+        </DndContext>
       </Modal>
     </div>
   );

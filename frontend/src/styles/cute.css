@@ -420,3 +420,80 @@ input, textarea {
   color: #8c6f7a !important;
   opacity: 1;
 }
+
+/* ============ 工具面板 ============ */
+.tool-panel {
+  border-radius: 16px !important;
+  border: 2px solid #e8dbef !important;
+  background: #fff !important;
+  box-shadow: 0 4px 16px rgba(162, 155, 254, 0.1);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.tool-panel.open {
+  box-shadow: 0 8px 24px rgba(162, 155, 254, 0.18);
+}
+
+.tool-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #5a3d4a;
+  font-size: 13px;
+  transition: all 0.25s ease;
+  user-select: none;
+  margin-top: 4px;
+}
+
+.tool-item:hover {
+  background: #f8f0ff;
+  color: #a29bfe;
+}
+
+/* ============ 排序列表项 ============ */
+.sort-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 2px solid #ffe0e6;
+  border-radius: 12px;
+  cursor: default;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.sort-item:hover {
+  border-color: #ffb8c6;
+  box-shadow: 0 4px 12px rgba(255, 107, 129, 0.1);
+}
+.sort-item.dragging {
+  box-shadow: 0 8px 24px rgba(255, 107, 129, 0.2);
+  border-color: #ff6b81;
+  z-index: 10;
+}
+.sort-item-handle {
+  cursor: grab;
+  color: #b8929e;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.sort-item-handle:hover {
+  color: #ff6b81;
+  background: #fef0f3;
+}
+.sort-item-handle:active {
+  cursor: grabbing;
+}
+.sort-item-name {
+  color: #5a3d4a;
+  font-size: 14px;
+  font-weight: 500;
+}

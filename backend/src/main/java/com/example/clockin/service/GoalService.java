@@ -9,4 +9,5 @@ public interface GoalService {
     void deleteGoal(Long goalId);
     GoalDTO getGoal(Long goalId);
     List<GoalDTO> getUserGoals(Long userId);
+    void reorderGoals(GoalDTO.ReorderRequest request);
 }

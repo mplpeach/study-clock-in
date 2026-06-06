@@ -78,6 +78,17 @@ public class GoalServiceImpl implements GoalService {
         return goals.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public void reorderGoals(GoalDTO.ReorderRequest request) {
+        for (GoalDTO.ReorderItem item : request.getItems()) {
+            Goal goal = goalRepository.findById(item.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("目标不存在: " + item.getId()));
+            goal.setSortOrder(item.getSortOrder());
+            goalRepository.save(goal);
+        }
+    }
+
     private GoalDTO toDTO(Goal goal) {
         GoalDTO dto = new GoalDTO();
         dto.setId(goal.getId());

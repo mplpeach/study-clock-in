@@ -29,4 +29,15 @@ public class GoalDTO {
         private String color;
         private Integer sortOrder;
     }
+
+    @Data
+    public static class ReorderRequest {
+        private List<ReorderItem> items;
+    }
+
+    @Data
+    public static class ReorderItem {
+        private Long id;
+        private Integer sortOrder;
+    }
 }
