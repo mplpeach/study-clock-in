@@ -67,6 +67,7 @@ const CheckInPage: React.FC = () => {
   const [elapsed, setElapsed] = useState(0);
   const [accumulatedElapsed, setAccumulatedElapsed] = useState(0);
   const timerRef = useRef(0);
+  const recordStartTimeRef = useRef<number>(0);
 
   const [startModalOpen, setStartModalOpen] = useState(false);
   const [startTaskType, setStartTaskType] = useState<'existing' | 'new'>('existing');
@@ -117,6 +118,37 @@ const CheckInPage: React.FC = () => {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const [hasRestored, setHasRestored] = useState(false);
+
+  useEffect(() => {
+    if (hasRestored || todayInstances.length === 0) return;
+
+    const inProgress = todayInstances.find((i) => i.status === 'IN_PROGRESS');
+    if (!inProgress) { setHasRestored(true); return; }
+
+    (async () => {
+      try {
+        const records = await checkInApi.getByInstance(inProgress.id);
+        const activeRecord = records.find((r) => r.startTime && !r.endTime);
+        if (!activeRecord) { setHasRestored(true); return; }
+
+        const completedSeconds = records
+          .filter((r) => r.startTime && r.endTime)
+          .reduce((sum, r) => sum + dayjs(r.endTime!).diff(dayjs(r.startTime!), 'second'), 0);
+
+        setActiveInstanceId(inProgress.id);
+        setActiveRecordId(activeRecord.id);
+        setAccumulatedElapsed(completedSeconds);
+        recordStartTimeRef.current = dayjs(activeRecord.startTime!).valueOf();
+        setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
+        startTimer();
+      } catch (e) {
+        console.error('自动恢复计时失败', e);
+      }
+      setHasRestored(true);
+    })();
+  }, [todayInstances, hasRestored]);
 
   const statusOrder: Record<string, number> = { IN_PROGRESS: 0, TODO: 1, COMPLETED: 2 };
 
@@ -203,7 +235,7 @@ const CheckInPage: React.FC = () => {
   const startTimer = useCallback(() => {
     stopTimer();
     timerRef.current = window.setInterval(() => {
-      setElapsed((prev) => prev + 1);
+      setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
     }, 1000);
   }, [stopTimer]);
 
@@ -214,6 +246,7 @@ const CheckInPage: React.FC = () => {
     setActiveRecordId(null);
     setElapsed(0);
     setAccumulatedElapsed(0);
+    recordStartTimeRef.current = 0;
     stopTimer();
   }, [stopTimer]);
 
@@ -256,8 +289,9 @@ const CheckInPage: React.FC = () => {
     const record = await checkInApi.start(instance.id);
     setActiveInstanceId(instance.id);
     setActiveRecordId(record.id);
-    setElapsed(0);
     setAccumulatedElapsed(0);
+    recordStartTimeRef.current = dayjs(record.startTime).valueOf();
+    setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
     startTimer();
     message.success('开始学习！加油~ 💪');
     setStartModalOpen(false);
@@ -287,8 +321,9 @@ const CheckInPage: React.FC = () => {
       const record = await checkInApi.start(instanceId);
       setActiveInstanceId(instanceId);
       setActiveRecordId(record.id);
-      setElapsed(0);
       setAccumulatedElapsed(totalSeconds);
+      recordStartTimeRef.current = dayjs(record.startTime).valueOf();
+      setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
       startTimer();
       message.success('继续学习！加油~ 💪');
       fetchData();
@@ -300,8 +335,9 @@ const CheckInPage: React.FC = () => {
       const record = await checkInApi.start(instanceId);
       setActiveInstanceId(instanceId);
       setActiveRecordId(record.id);
-      setElapsed(0);
       setAccumulatedElapsed(0);
+      recordStartTimeRef.current = dayjs(record.startTime).valueOf();
+      setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
       startTimer();
       message.success('开始学习！加油~ 💪');
       fetchData();
@@ -368,10 +404,11 @@ const CheckInPage: React.FC = () => {
 
   const handlePauseSubmit = async () => {
     const values = await pauseForm.validateFields();
+    const durationSeconds = Math.floor((Date.now() - recordStartTimeRef.current) / 1000);
     await checkInApi.end(activeRecordId!, {
       content: values.content,
       complete: false,
-      durationSeconds: elapsed,
+      durationSeconds,
     });
     message.success('已记录学习内容~ 📝');
     setPauseModalOpen(false);
@@ -404,11 +441,12 @@ const CheckInPage: React.FC = () => {
 
   const handleEndSubmit = async () => {
     const values = await endForm.validateFields();
+    const durationSeconds = Math.floor((Date.now() - recordStartTimeRef.current) / 1000);
     await checkInApi.end(endRecordId!, {
       content: values.content,
       note: values.note,
       complete: true,
-      durationSeconds: elapsed,
+      durationSeconds,
     }, endFiles.length > 0 ? endFiles : undefined);
     message.success('学习完成！太棒了~ 🎉');
     setEndModalOpen(false);
