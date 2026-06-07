@@ -189,15 +189,11 @@ public class CheckInServiceImpl implements CheckInService {
         Map<Long, Goal> goalMap = goalRepository.findAllById(goalIds).stream()
                 .collect(Collectors.toMap(Goal::getId, g -> g));
 
-        Map<Long, String> taskGoalColor = new HashMap<>();
-        Map<Long, Long> taskGoalId = new HashMap<>();
-        Map<Long, String> taskGoalName = new HashMap<>();
+        Map<Long, List<Goal>> taskGoals = new HashMap<>();
         for (GoalTask gt : goalTasks) {
             Goal goal = goalMap.get(gt.getGoalId());
-            if (goal != null && !taskGoalColor.containsKey(gt.getTaskId())) {
-                taskGoalColor.put(gt.getTaskId(), goal.getColor());
-                taskGoalId.put(gt.getTaskId(), goal.getId());
-                taskGoalName.put(gt.getTaskId(), goal.getName());
+            if (goal != null) {
+                taskGoals.computeIfAbsent(gt.getTaskId(), k -> new ArrayList<>()).add(goal);
             }
         }
 
@@ -219,9 +215,10 @@ public class CheckInServiceImpl implements CheckInService {
             dto.setTaskInstanceId(instance.getId());
             dto.setTaskId(task.getId());
             dto.setTaskName(task.getName());
-            dto.setGoalId(taskGoalId.get(task.getId()));
-            dto.setGoalName(taskGoalName.get(task.getId()));
-            dto.setGoalColor(taskGoalColor.getOrDefault(task.getId(), "#ff6b81"));
+            List<Goal> goals = taskGoals.getOrDefault(task.getId(), Collections.emptyList());
+            dto.setGoalIds(goals.stream().map(Goal::getId).collect(Collectors.toList()));
+            dto.setGoalNames(goals.stream().map(Goal::getName).collect(Collectors.toList()));
+            dto.setGoalColors(goals.stream().map(g -> g.getColor() != null ? g.getColor() : "#ff6b81").collect(Collectors.toList()));
             dto.setStatus(instance.getStatus().name());
             dto.setStartTime(r.getStartTime());
             dto.setEndTime(r.getEndTime());

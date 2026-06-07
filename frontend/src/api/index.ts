@@ -107,9 +107,9 @@ export interface TimelineEntry {
   taskInstanceId: number;
   taskId: number;
   taskName: string;
-  goalId: number | null;
-  goalName: string | null;
-  goalColor: string | null;
+  goalIds: number[];
+  goalNames: string[];
+  goalColors: string[];
   status: string;
   startTime: string;
   endTime: string | null;

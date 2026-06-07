@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Card, Calendar, Badge, Modal, Tag, Button, message, Empty, Row, Col,
+  Card, Calendar, Badge, Modal, Tag, Button, message, Empty, Row, Col, Popover,
 } from 'antd';
 import { DeleteOutlined, LeftOutlined, RightOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
@@ -173,7 +173,7 @@ const CalendarPage: React.FC = () => {
             <div className="timeline-container">
               {timelineEntries.map((entry, i) => (
                 <div key={entry.recordId} className={`timeline-item ${i % 2 === 0 ? 'left' : 'right'}`}>
-                  <div className="timeline-dot" style={{ background: entry.goalColor || '#ff6b81' }} />
+                  <div className="timeline-dot" style={{ background: entry.goalColors[0] || '#ff6b81' }} />
                   <div className="timeline-card">
                     <div className="timeline-time">
                       {dayjs(entry.startTime).format('HH:mm')}
@@ -185,8 +185,28 @@ const CalendarPage: React.FC = () => {
                     </div>
                     <div className="timeline-task-name">{entry.taskName}</div>
                     <div className="timeline-meta">
-                      {entry.goalName && (
-                        <Tag className="cute-tag" color="#a29bfe" style={{ fontSize: 11 }}>{entry.goalName}</Tag>
+                      {entry.goalNames.length > 0 && (
+                        <>
+                          {entry.goalNames.slice(0, 2).map((name, idx) => (
+                            <Tag key={idx} className="cute-tag" color="#a29bfe" style={{ fontSize: 11 }}>{name}</Tag>
+                          ))}
+                          {entry.goalNames.length > 2 && (
+                            <Popover
+                              content={
+                                <div style={{ maxWidth: 200 }}>
+                                  {entry.goalNames.map((name, idx) => (
+                                    <Tag key={idx} className="cute-tag" color="#a29bfe" style={{ marginBottom: 4 }}>{name}</Tag>
+                                  ))}
+                                </div>
+                              }
+                              trigger="hover"
+                            >
+                              <Tag className="cute-tag" color={entry.goalColors[0] || '#ff6b81'} style={{ fontSize: 11, cursor: 'pointer' }}>
+                                +{entry.goalNames.length - 2}
+                              </Tag>
+                            </Popover>
+                          )}
+                        </>
                       )}
                       <span className="timeline-duration">{formatMinutes(entry.durationMinutes)}</span>
                     </div>

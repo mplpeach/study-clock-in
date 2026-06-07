@@ -11,9 +11,9 @@ public class TimelineEntryDTO {
     private Long taskInstanceId;
     private Long taskId;
     private String taskName;
-    private Long goalId;
-    private String goalName;
-    private String goalColor;
+    private List<Long> goalIds;
+    private List<String> goalNames;
+    private List<String> goalColors;
     private String status;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
