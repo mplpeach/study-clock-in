@@ -25,4 +25,13 @@ public interface CheckInRecordRepository extends JpaRepository<CheckInRecord, Lo
     Long sumDurationByUserIdAndDateRange(@Param("userId") Long userId,
                                           @Param("start") LocalDateTime start,
                                           @Param("end") LocalDateTime end);
+
+    @Query("SELECT r FROM CheckInRecord r " +
+           "WHERE r.userId = :userId " +
+           "  AND r.startTime >= :startOfDay " +
+           "  AND r.startTime < :startOfNextDay " +
+           "ORDER BY r.startTime ASC")
+    List<CheckInRecord> findByUserIdAndDate(@Param("userId") Long userId,
+                                            @Param("startOfDay") LocalDateTime startOfDay,
+                                            @Param("startOfNextDay") LocalDateTime startOfNextDay);
 }

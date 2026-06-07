@@ -2,11 +2,14 @@ package com.example.clockin.controller;
 
 import com.example.clockin.common.ApiResponse;
 import com.example.clockin.dto.CheckInDTO;
+import com.example.clockin.dto.TimelineEntryDTO;
 import com.example.clockin.service.CheckInService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -46,6 +49,12 @@ public class CheckInController {
     @GetMapping("/active")
     public ApiResponse<CheckInDTO.ActiveSessionResponse> getActive() {
         return ApiResponse.success(checkInService.getActiveSession(DEFAULT_USER_ID));
+    }
+
+    @GetMapping("/timeline")
+    public ApiResponse<List<TimelineEntryDTO>> getTimeline(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ApiResponse.success(checkInService.getTimelineEntries(DEFAULT_USER_ID, date));
     }
 
     @GetMapping("/{id}")

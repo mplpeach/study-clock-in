@@ -8,6 +8,7 @@ import java.util.Optional;
 public interface GoalTaskRepository extends JpaRepository<GoalTask, Long> {
     List<GoalTask> findByGoalId(Long goalId);
     List<GoalTask> findByTaskId(Long taskId);
+    List<GoalTask> findByTaskIdIn(List<Long> taskIds);
     Optional<GoalTask> findByGoalIdAndTaskId(Long goalId, Long taskId);
     void deleteByGoalIdAndTaskId(Long goalId, Long taskId);
     boolean existsByGoalIdAndTaskId(Long goalId, Long taskId);

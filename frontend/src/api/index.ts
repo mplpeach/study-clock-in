@@ -102,6 +102,23 @@ export interface CheckInRecord {
   imageUrls: string[];
 }
 
+export interface TimelineEntry {
+  recordId: number;
+  taskInstanceId: number;
+  taskId: number;
+  taskName: string;
+  goalId: number | null;
+  goalName: string | null;
+  goalColor: string | null;
+  status: string;
+  startTime: string;
+  endTime: string | null;
+  durationMinutes: number;
+  content: string | null;
+  note: string | null;
+  imageUrls: string[];
+}
+
 export interface ActiveSessionResponse {
   recordId: number;
   instanceId: number;
@@ -150,6 +167,8 @@ export const checkInApi = {
   getAll: () => client.get<any, CheckInRecord[]>('/checkins'),
   hasActive: () => client.get<any, boolean>('/checkins/has-active'),
   getActive: () => client.get<any, ActiveSessionResponse | null>('/checkins/active'),
+  getTimeline: (date: string) =>
+    client.get<any, TimelineEntry[]>('/checkins/timeline', { params: { date } }),
 };
 
 export interface GoalStats {

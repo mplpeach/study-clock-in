@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface CheckInImageRepository extends JpaRepository<CheckInImage, Long> {
     List<CheckInImage> findByRecordId(Long recordId);
+    List<CheckInImage> findByRecordIdIn(List<Long> recordIds);
     void deleteByRecordId(Long recordId);
 }

@@ -1,6 +1,7 @@
 package com.example.clockin.service.impl;
 
 import com.example.clockin.dto.CheckInDTO;
+import com.example.clockin.dto.TimelineEntryDTO;
 import com.example.clockin.entity.*;
 import com.example.clockin.enums.CheckInType;
 import com.example.clockin.enums.RepeatRule;
@@ -15,9 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -165,6 +166,71 @@ public class CheckInServiceImpl implements CheckInService {
             }
         }
         return false;
+    }
+
+    @Override
+    public List<TimelineEntryDTO> getTimelineEntries(Long userId, LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime startOfNextDay = date.plusDays(1).atStartOfDay();
+
+        List<CheckInRecord> records = recordRepository.findByUserIdAndDate(userId, startOfDay, startOfNextDay);
+        if (records.isEmpty()) return Collections.emptyList();
+
+        Set<Long> instanceIds = records.stream().map(CheckInRecord::getTaskInstanceId).collect(Collectors.toSet());
+        Map<Long, TaskInstance> instanceMap = instanceRepository.findAllById(instanceIds).stream()
+                .collect(Collectors.toMap(TaskInstance::getId, i -> i));
+
+        Set<Long> taskIds = instanceMap.values().stream().map(TaskInstance::getTaskId).collect(Collectors.toSet());
+        Map<Long, Task> taskMap = taskRepository.findAllById(taskIds).stream()
+                .collect(Collectors.toMap(Task::getId, t -> t));
+
+        List<GoalTask> goalTasks = goalTaskRepository.findByTaskIdIn(new ArrayList<>(taskIds));
+        Set<Long> goalIds = goalTasks.stream().map(GoalTask::getGoalId).collect(Collectors.toSet());
+        Map<Long, Goal> goalMap = goalRepository.findAllById(goalIds).stream()
+                .collect(Collectors.toMap(Goal::getId, g -> g));
+
+        Map<Long, String> taskGoalColor = new HashMap<>();
+        Map<Long, Long> taskGoalId = new HashMap<>();
+        Map<Long, String> taskGoalName = new HashMap<>();
+        for (GoalTask gt : goalTasks) {
+            Goal goal = goalMap.get(gt.getGoalId());
+            if (goal != null && !taskGoalColor.containsKey(gt.getTaskId())) {
+                taskGoalColor.put(gt.getTaskId(), goal.getColor());
+                taskGoalId.put(gt.getTaskId(), goal.getId());
+                taskGoalName.put(gt.getTaskId(), goal.getName());
+            }
+        }
+
+        List<Long> recordIds = records.stream().map(CheckInRecord::getId).collect(Collectors.toList());
+        Map<Long, List<String>> imageMap = imageRepository.findByRecordIdIn(recordIds).stream()
+                .collect(Collectors.groupingBy(CheckInImage::getRecordId,
+                        Collectors.mapping(CheckInImage::getFilePath, Collectors.toList())));
+
+        return records.stream().map(r -> {
+            TaskInstance instance = instanceMap.get(r.getTaskInstanceId());
+            if (instance == null) return null;
+            Task task = taskMap.get(instance.getTaskId());
+            if (task == null) return null;
+
+            List<String> images = imageMap.getOrDefault(r.getId(), Collections.emptyList());
+
+            TimelineEntryDTO dto = new TimelineEntryDTO();
+            dto.setRecordId(r.getId());
+            dto.setTaskInstanceId(instance.getId());
+            dto.setTaskId(task.getId());
+            dto.setTaskName(task.getName());
+            dto.setGoalId(taskGoalId.get(task.getId()));
+            dto.setGoalName(taskGoalName.get(task.getId()));
+            dto.setGoalColor(taskGoalColor.getOrDefault(task.getId(), "#ff6b81"));
+            dto.setStatus(instance.getStatus().name());
+            dto.setStartTime(r.getStartTime());
+            dto.setEndTime(r.getEndTime());
+            dto.setDurationMinutes(r.getDurationMinutes() != null ? (long) r.getDurationMinutes() : 0);
+            dto.setContent(r.getContent());
+            dto.setNote(r.getNote());
+            dto.setImageUrls(images);
+            return dto;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     @Override

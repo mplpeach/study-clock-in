@@ -1,8 +1,10 @@
 package com.example.clockin.service;
 
 import com.example.clockin.dto.CheckInDTO;
+import com.example.clockin.dto.TimelineEntryDTO;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface CheckInService {
@@ -14,4 +16,6 @@ public interface CheckInService {
     List<CheckInDTO> getUserRecords(Long userId);
     boolean hasActiveCheckIn(Long userId);
     CheckInDTO.ActiveSessionResponse getActiveSession(Long userId);
+
+    List<TimelineEntryDTO> getTimelineEntries(Long userId, LocalDate date);
 }

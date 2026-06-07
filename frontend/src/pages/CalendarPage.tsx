@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Card, Calendar, Badge, Modal, List, Tag, Button, message, Empty, Row, Col,
+  Card, Calendar, Badge, Modal, Tag, Button, message, Empty, Row, Col,
 } from 'antd';
-import { DeleteOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { DeleteOutlined, LeftOutlined, RightOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
-import { instanceApi } from '../api';
-import type { TaskInstance } from '../api';
+import { instanceApi, checkInApi } from '../api';
+import type { TaskInstance, TimelineEntry } from '../api';
 
 const CalendarPage: React.FC = () => {
   const [monthData, setMonthData] = useState<Record<string, TaskInstance[]>>({});
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [dateInstances, setDateInstances] = useState<TaskInstance[]>([]);
+  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(dayjs());
   const panelChanging = useRef(false);
@@ -32,11 +32,12 @@ const CalendarPage: React.FC = () => {
     const dateStr = date.format('YYYY-MM-DD');
     setSelectedDate(dateStr);
     try {
-      const instances = await instanceApi.getByDate(dateStr);
-      setDateInstances(instances);
+      const entries = await checkInApi.getTimeline(dateStr);
+      setTimelineEntries(entries);
       setDetailModalOpen(true);
     } catch (e) {
       console.error(e);
+      message.error('加载时间线数据失败');
     }
   };
 
@@ -45,8 +46,10 @@ const CalendarPage: React.FC = () => {
       await instanceApi.delete(id);
       message.success('已删除');
       fetchMonthData(currentMonth);
-      const instances = await instanceApi.getByDate(selectedDate);
-      setDateInstances(instances);
+      if (detailModalOpen) {
+        const entries = await checkInApi.getTimeline(selectedDate);
+        setTimelineEntries(entries);
+      }
     } catch (e: any) {
       message.error(e.message);
     }
@@ -79,8 +82,11 @@ const CalendarPage: React.FC = () => {
     );
   };
 
-  const isOverdue = (date: string) => {
-    return dayjs(date).isBefore(dayjs(), 'day');
+  const formatMinutes = (mins: number) => {
+    if (mins < 60) return `${mins}分钟`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
   };
 
   const headerRender = ({ value, onChange }: { value: Dayjs; onChange: (d: Dayjs) => void }) => {
@@ -148,61 +154,67 @@ const CalendarPage: React.FC = () => {
 
       <Modal
         className="cute-modal"
-        title={<span style={{ color: '#5a3d4a' }}>📅 {selectedDate} 的任务</span>}
+        centered
+        title={
+          <span style={{ color: '#5a3d4a' }}>
+            <ClockCircleOutlined style={{ marginRight: 8, color: '#ff6b81' }} />
+            {selectedDate} 学习时间线
+          </span>
+        }
         open={detailModalOpen}
         onCancel={() => setDetailModalOpen(false)}
         footer={null}
+        width={640}
       >
-        {dateInstances.length === 0 ? (
-          <Empty description="这天没有任务 🌸" />
+        {timelineEntries.length === 0 ? (
+          <Empty description="这天没有学习记录 🌸" />
         ) : (
-          <List
-            dataSource={dateInstances}
-            renderItem={(item) => (
-              <List.Item className="log-row"
-                actions={[
-                  <Button type="text" danger icon={<DeleteOutlined />}
-                    onClick={() => {
-                      Modal.confirm({
-                        icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
-                        title: '确定删除这条任务吗？',
-                        className: 'cute-modal',
-                        centered: true,
-                        okText: '确定',
-                        cancelText: '取消',
-                        okButtonProps: { danger: true, style: { borderRadius: 20 } },
-                        cancelButtonProps: { style: { borderRadius: 20 } },
-                        onOk: () => handleDeleteInstance(item.id),
-                      });
-                    }}
-                  />,
-                ]}
-              >
-                <List.Item.Meta
-                  title={<span style={{ color: '#5a3d4a' }}>{item.taskName}</span>}
-                  description={
-                    <div>
-                      {item.goalName && <Tag className="cute-tag" color="#a29bfe">{item.goalName}</Tag>}
-                      <Tag className="cute-tag"
-                        color={item.status === 'COMPLETED' ? '#2ed573' :
-                               item.status === 'IN_PROGRESS' ? '#ffa502' :
-                               item.status === 'SKIPPED' ? '#b8929e' :
-                               item.status === 'DEFERRED' ? '#b8929e' : '#b8929e'}
-                      >
-                        {item.status === 'TODO' ? '待开始' :
-                         item.status === 'IN_PROGRESS' ? '进行中' :
-                         item.status === 'SKIPPED' ? '已跳过' :
-                         item.status === 'DEFERRED' ? '已延期' : '已完成'}
-                      </Tag>
-                      {isOverdue(item.scheduledDate) && item.status !== 'COMPLETED' && item.status !== 'SKIPPED' && item.status !== 'DEFERRED' && (
-                        <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
-                      )}
+          <div className="timeline-scroll">
+            <div className="timeline-container">
+              {timelineEntries.map((entry, i) => (
+                <div key={entry.recordId} className={`timeline-item ${i % 2 === 0 ? 'left' : 'right'}`}>
+                  <div className="timeline-dot" style={{ background: entry.goalColor || '#ff6b81' }} />
+                  <div className="timeline-card">
+                    <div className="timeline-time">
+                      {dayjs(entry.startTime).format('HH:mm')}
+                      {' — '}
+                      {entry.endTime
+                        ? dayjs(entry.endTime).format('HH:mm')
+                        : <span className="active-badge">进行中</span>
+                      }
                     </div>
-                  }
-                />
-              </List.Item>
-            )}
-          />
+                    <div className="timeline-task-name">{entry.taskName}</div>
+                    <div className="timeline-meta">
+                      {entry.goalName && (
+                        <Tag className="cute-tag" color="#a29bfe" style={{ fontSize: 11 }}>{entry.goalName}</Tag>
+                      )}
+                      <span className="timeline-duration">{formatMinutes(entry.durationMinutes)}</span>
+                    </div>
+                    {entry.content && (
+                      <div className="timeline-content">{entry.content}</div>
+                    )}
+                  </div>
+                  <div style={{ marginTop: 4, textAlign: i % 2 === 0 ? 'right' : 'left' }}>
+                    <Button type="text" danger size="small" icon={<DeleteOutlined />}
+                      onClick={() => {
+                        Modal.confirm({
+                          icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
+                          title: '确定删除这条任务吗？',
+                          className: 'cute-modal',
+                          centered: true,
+                          okText: '确定',
+                          cancelText: '取消',
+                          okButtonProps: { danger: true, style: { borderRadius: 20 } },
+                          cancelButtonProps: { style: { borderRadius: 20 } },
+                          onOk: () => handleDeleteInstance(entry.taskInstanceId),
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </Modal>
     </div>
