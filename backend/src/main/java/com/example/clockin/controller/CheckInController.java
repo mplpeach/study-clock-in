@@ -43,6 +43,11 @@ public class CheckInController {
         return ApiResponse.success(checkInService.hasActiveCheckIn(DEFAULT_USER_ID));
     }
 
+    @GetMapping("/active")
+    public ApiResponse<CheckInDTO.ActiveSessionResponse> getActive() {
+        return ApiResponse.success(checkInService.getActiveSession(DEFAULT_USER_ID));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<CheckInDTO> getById(@PathVariable Long id) {
         return ApiResponse.success(checkInService.getCheckInRecord(id));

@@ -13,4 +13,5 @@ public interface CheckInService {
     List<CheckInDTO> getRecordsByTaskInstance(Long taskInstanceId);
     List<CheckInDTO> getUserRecords(Long userId);
     boolean hasActiveCheckIn(Long userId);
+    CheckInDTO.ActiveSessionResponse getActiveSession(Long userId);
 }

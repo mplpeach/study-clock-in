@@ -2,6 +2,7 @@ package com.example.clockin.repository;
 
 import com.example.clockin.entity.TaskInstanceAction;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import java.util.List;
 
 public interface TaskInstanceActionRepository extends JpaRepository<TaskInstanceAction, Long> {
@@ -9,4 +10,6 @@ public interface TaskInstanceActionRepository extends JpaRepository<TaskInstance
     List<TaskInstanceAction> findByTaskInstanceIdOrderByCreatedAtDesc(Long taskInstanceId);
 
     List<TaskInstanceAction> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    void deleteByTaskInstanceId(Long taskInstanceId);
 }

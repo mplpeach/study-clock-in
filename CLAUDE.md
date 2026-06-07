@@ -5,8 +5,12 @@
 ## 常用命令
 
 ```bash
-# 后端（Spring Boot，端口 8080）
-cd backend && mvn spring-boot:run
+# 后端（Spring Boot，端口 8080）—— 必须从 .env 读取 DB_PASSWORD
+# 启动前先 source .env 或在命令中内联
+cd backend && DB_PASSWORD=$(grep DB_PASSWORD ../.env | cut -d= -f2) mvn spring-boot:run
+
+# 若遇到 ClassNotFoundException，先 clean 再启动
+cd backend && mvn clean compile -q && DB_PASSWORD=$(grep DB_PASSWORD ../.env | cut -d= -f2) mvn spring-boot:run -q
 
 # 前端（Vite + React，端口 5173）
 cd frontend && npm run dev
@@ -14,6 +18,16 @@ cd frontend && npm run dev
 # Docker 完整栈部署
 docker-compose up -d
 ```
+
+## 数据库连接
+
+- **密码存放**：项目根目录 `.env` 文件中 `DB_PASSWORD=xxx`，不要硬编码到任何会进 git 的文件
+- **后端配置**：`application.yml` 中为 `${DB_PASSWORD:}`，**必须通过环境变量传入**，否则 `Access denied for user 'root'@'localhost'`
+- **MySQL 端口**：3306（本地直连），3307（Docker 映射）
+- **数据库名**：`study_clock_in`
+- **用户名**：`root`
+- **连接命令**：`mysql -u root -p$(grep DB_PASSWORD .env | cut -d= -f2) -h localhost -P 3306 study_clock_in`
+- **表名**：`check_in_records`（复数）、`task_instances`、`tasks`、`goals`、`users` 等
 
 暂无测试。`mvn test` 和 `npm test` 在编写测试后将运行默认配置。项目使用 `ddl-auto: update`，Hibernate 自动管理表结构，无迁移脚本。
 

@@ -55,4 +55,15 @@ public class CheckInDTO {
         private Integer year;
         private Integer month;
     }
+
+    @Data
+    public static class ActiveSessionResponse {
+        private Long recordId;
+        private Long instanceId;
+        private Long taskId;
+        private String taskName;
+        private LocalDateTime startTime;
+        private long accumulatedSeconds;
+        private long elapsedSeconds;
+    }
 }

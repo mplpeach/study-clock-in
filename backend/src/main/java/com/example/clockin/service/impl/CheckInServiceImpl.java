@@ -53,6 +53,13 @@ public class CheckInServiceImpl implements CheckInService {
         TaskInstance instance = instanceRepository.findById(request.getTaskInstanceId())
                 .orElseThrow(() -> new EntityNotFoundException("任务实例不存在"));
 
+        List<CheckInRecord> orphans = recordRepository
+                .findByTaskInstanceIdAndEndTimeIsNull(request.getTaskInstanceId());
+        for (CheckInRecord orphan : orphans) {
+            orphan.setEndTime(LocalDateTime.now());
+            recordRepository.save(orphan);
+        }
+
         instance.setStatus(TaskInstanceStatus.IN_PROGRESS);
         instanceRepository.save(instance);
 
@@ -150,7 +157,55 @@ public class CheckInServiceImpl implements CheckInService {
 
     @Override
     public boolean hasActiveCheckIn(Long userId) {
-        return !recordRepository.findByUserIdAndEndTimeIsNull(userId).isEmpty();
+        List<CheckInRecord> openRecords = recordRepository.findByUserIdAndEndTimeIsNull(userId);
+        for (CheckInRecord r : openRecords) {
+            TaskInstance inst = instanceRepository.findById(r.getTaskInstanceId()).orElse(null);
+            if (inst != null && inst.getStatus() == TaskInstanceStatus.IN_PROGRESS) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public CheckInDTO.ActiveSessionResponse getActiveSession(Long userId) {
+        List<CheckInRecord> openRecords = recordRepository.findByUserIdAndEndTimeIsNull(userId);
+        if (openRecords.isEmpty()) return null;
+
+        CheckInRecord record = null;
+        TaskInstance instance = null;
+        for (CheckInRecord r : openRecords) {
+            TaskInstance inst = instanceRepository.findById(r.getTaskInstanceId()).orElse(null);
+            if (inst != null && inst.getStatus() == TaskInstanceStatus.IN_PROGRESS) {
+                record = r;
+                instance = inst;
+                break;
+            }
+        }
+        if (record == null) return null;
+
+        Task task = taskRepository.findById(instance.getTaskId()).orElse(null);
+
+        List<CheckInRecord> allRecords = recordRepository.findByTaskInstanceId(instance.getId());
+        long accumulatedSeconds = allRecords.stream()
+                .filter(r -> r.getStartTime() != null && r.getEndTime() != null)
+                .mapToLong(r -> {
+                    long secs = Duration.between(r.getStartTime(), r.getEndTime()).toSeconds();
+                    return secs > 0 ? secs : 0;
+                })
+                .sum();
+
+        long elapsedSeconds = Duration.between(record.getStartTime(), LocalDateTime.now()).toSeconds();
+
+        CheckInDTO.ActiveSessionResponse resp = new CheckInDTO.ActiveSessionResponse();
+        resp.setRecordId(record.getId());
+        resp.setInstanceId(instance.getId());
+        resp.setTaskId(instance.getTaskId());
+        resp.setTaskName(task != null ? task.getName() : "");
+        resp.setStartTime(record.getStartTime());
+        resp.setAccumulatedSeconds(accumulatedSeconds);
+        resp.setElapsedSeconds(elapsedSeconds);
+        return resp;
     }
 
     private void saveImages(Long recordId, List<MultipartFile> images) {

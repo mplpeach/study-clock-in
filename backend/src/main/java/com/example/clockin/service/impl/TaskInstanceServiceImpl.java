@@ -104,6 +104,7 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
             checkInImageRepository.deleteByRecordId(record.getId());
             checkInRecordRepository.deleteById(record.getId());
         }
+        actionRepository.deleteByTaskInstanceId(instanceId);
         instanceRepository.deleteById(instanceId);
     }
 
@@ -117,6 +118,7 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
                 checkInImageRepository.deleteByRecordId(record.getId());
                 checkInRecordRepository.deleteById(record.getId());
             }
+            actionRepository.deleteByTaskInstanceId(instance.getId());
         }
         instanceRepository.deleteAll(instances);
     }

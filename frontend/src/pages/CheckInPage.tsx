@@ -11,6 +11,7 @@ import {
 import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
 import { instanceApi, checkInApi, taskApi, goalApi } from '../api';
+import { useTimer } from '../contexts/TimerContext';
 import type { TaskInstance, Task, Goal } from '../api';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -34,8 +35,7 @@ interface GoalGroup {
   goalName: string;
   color: string;
   sortOrder: number;
-  todayItems: TaskInstance[];
-  overdueItems: TaskInstance[];
+  items: (TaskInstance & { isOverdue: boolean })[];
 }
 
 const SortableGoalItem: React.FC<{ id: number; goal: Goal }> = ({ id, goal }) => {
@@ -64,10 +64,8 @@ const CheckInPage: React.FC = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const [activeInstanceId, setActiveInstanceId] = useState<number | null>(null);
-  const [activeRecordId, setActiveRecordId] = useState<number | null>(null);
+  const timer = useTimer();
   const [elapsed, setElapsed] = useState(0);
-  const [accumulatedElapsed, setAccumulatedElapsed] = useState(0);
   const timerRef = useRef(0);
   const recordStartTimeRef = useRef<number>(0);
 
@@ -127,33 +125,24 @@ const CheckInPage: React.FC = () => {
   const [hasRestored, setHasRestored] = useState(false);
 
   useEffect(() => {
-    if (hasRestored || todayInstances.length === 0) return;
-
-    const inProgress = todayInstances.find((i) => i.status === 'IN_PROGRESS');
-    if (!inProgress) { setHasRestored(true); return; }
+    if (hasRestored) return;
 
     (async () => {
       try {
-        const records = await checkInApi.getByInstance(inProgress.id);
-        const activeRecord = records.find((r) => r.startTime && !r.endTime);
-        if (!activeRecord) { setHasRestored(true); return; }
-
-        const completedSeconds = records
-          .filter((r) => r.startTime && r.endTime)
-          .reduce((sum, r) => sum + dayjs(r.endTime!).diff(dayjs(r.startTime!), 'second'), 0);
-
-        setActiveInstanceId(inProgress.id);
-        setActiveRecordId(activeRecord.id);
-        setAccumulatedElapsed(completedSeconds);
-        recordStartTimeRef.current = dayjs(activeRecord.startTime!).valueOf();
-        setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
-        startTimer();
+        const session = await checkInApi.getActive();
+        if (session) {
+          const startTimeMs = dayjs(session.startTime).valueOf();
+          timer.startSession(session.instanceId, session.recordId, session.accumulatedSeconds, startTimeMs);
+          recordStartTimeRef.current = startTimeMs;
+          setElapsed(session.elapsedSeconds);
+          startTimer();
+        }
       } catch (e) {
         console.error('自动恢复计时失败', e);
       }
       setHasRestored(true);
     })();
-  }, [todayInstances, hasRestored]);
+  }, [hasRestored]);
 
   const statusOrder: Record<string, number> = { IN_PROGRESS: 0, TODO: 1, DEFERRED: 2, COMPLETED: 3 };
 
@@ -166,8 +155,7 @@ const CheckInPage: React.FC = () => {
         goalName: g.name,
         color: g.color,
         sortOrder: g.sortOrder,
-        todayItems: [],
-        overdueItems: [],
+        items: [],
       });
     }
 
@@ -176,48 +164,43 @@ const CheckInPage: React.FC = () => {
       goalName: '未分类',
       color: '#b8929e',
       sortOrder: 99999,
-      todayItems: [],
-      overdueItems: [],
+      items: [],
     });
 
     const sortByStatus = (a: TaskInstance, b: TaskInstance) =>
       (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
 
-    for (const item of todayInstances) {
-      const goalIds = item.goalIds;
-      if (goalIds && goalIds.length > 0) {
-        for (const gid of goalIds) {
-          const group = map.get(gid);
-          if (group) group.todayItems.push(item);
+    const pushItems = (instances: TaskInstance[], isOverdue: boolean) => {
+      for (const item of instances) {
+        const goalIds = item.goalIds;
+        const targets: GoalGroup[] = [];
+        if (goalIds && goalIds.length > 0) {
+          for (const gid of goalIds) {
+            const group = map.get(gid);
+            if (group) targets.push(group);
+          }
         }
-      } else {
-        map.get(null)!.todayItems.push(item);
-      }
-    }
+        if (targets.length === 0) targets.push(map.get(null)!);
 
-    for (const item of overdueInstances) {
-      const goalIds = item.goalIds;
-      if (goalIds && goalIds.length > 0) {
-        for (const gid of goalIds) {
-          const group = map.get(gid);
-          if (group) group.overdueItems.push(item);
+        for (const group of targets) {
+          group.items.push({ ...item, isOverdue });
         }
-      } else {
-        map.get(null)!.overdueItems.push(item);
       }
-    }
+    };
+
+    pushItems(todayInstances, false);
+    pushItems(overdueInstances, true);
 
     for (const group of map.values()) {
-      group.todayItems.sort(sortByStatus);
-      group.overdueItems.sort(sortByStatus);
+      group.items.sort(sortByStatus);
     }
 
     return Array.from(map.values())
-      .filter((g) => g.todayItems.length > 0 || g.overdueItems.length > 0)
+      .filter((g) => g.items.length > 0)
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }, [goals, todayInstances, overdueInstances]);
 
-  const timerDisplay = accumulatedElapsed + elapsed;
+  const timerDisplay = timer.accumulatedElapsed + elapsed;
 
   const detailInstance = useMemo(() => {
     if (detailInstanceId == null) return null;
@@ -247,13 +230,11 @@ const CheckInPage: React.FC = () => {
   useEffect(() => () => stopTimer(), [stopTimer]);
 
   const clearActive = useCallback(() => {
-    setActiveInstanceId(null);
-    setActiveRecordId(null);
+    timer.clearSession();
     setElapsed(0);
-    setAccumulatedElapsed(0);
     recordStartTimeRef.current = 0;
     stopTimer();
-  }, [stopTimer]);
+  }, [stopTimer, timer]);
 
   const formatElapsed = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -300,11 +281,10 @@ const CheckInPage: React.FC = () => {
 
     const instance = await resolveInstance(taskId);
     const record = await checkInApi.start(instance.id);
-    setActiveInstanceId(instance.id);
-    setActiveRecordId(record.id);
-    setAccumulatedElapsed(0);
-    recordStartTimeRef.current = dayjs(record.startTime).valueOf();
-    setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
+    const startTimeMs = dayjs(record.startTime).valueOf();
+    timer.startSession(instance.id, record.id, 0, startTimeMs);
+    recordStartTimeRef.current = startTimeMs;
+    setElapsed(Math.floor((Date.now() - startTimeMs) / 1000));
     startTimer();
     message.success('开始学习！加油~ 💪');
     setStartModalOpen(false);
@@ -332,11 +312,10 @@ const CheckInPage: React.FC = () => {
       }, 0);
 
       const record = await checkInApi.start(instanceId);
-      setActiveInstanceId(instanceId);
-      setActiveRecordId(record.id);
-      setAccumulatedElapsed(totalSeconds);
-      recordStartTimeRef.current = dayjs(record.startTime).valueOf();
-      setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
+      const startTimeMs = dayjs(record.startTime).valueOf();
+      timer.startSession(instanceId, record.id, totalSeconds, startTimeMs);
+      recordStartTimeRef.current = startTimeMs;
+      setElapsed(Math.floor((Date.now() - startTimeMs) / 1000));
       startTimer();
       message.success('继续学习！加油~ 💪');
       fetchData();
@@ -346,11 +325,10 @@ const CheckInPage: React.FC = () => {
   const doStartInstance = async (instanceId: number) => {
     try {
       const record = await checkInApi.start(instanceId);
-      setActiveInstanceId(instanceId);
-      setActiveRecordId(record.id);
-      setAccumulatedElapsed(0);
-      recordStartTimeRef.current = dayjs(record.startTime).valueOf();
-      setElapsed(Math.floor((Date.now() - recordStartTimeRef.current) / 1000));
+      const startTimeMs = dayjs(record.startTime).valueOf();
+      timer.startSession(instanceId, record.id, 0, startTimeMs);
+      recordStartTimeRef.current = startTimeMs;
+      setElapsed(Math.floor((Date.now() - startTimeMs) / 1000));
       startTimer();
       message.success('开始学习！加油~ 💪');
       fetchData();
@@ -374,7 +352,7 @@ const CheckInPage: React.FC = () => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task || task.status === 'COMPLETED') return;
 
-    if (activeRecordId !== null) {
+    if (timer.isActive) {
       searchParams.delete('autoStartTaskId');
       searchParams.delete('switch');
       setSearchParams(searchParams, { replace: true });
@@ -413,7 +391,7 @@ const CheckInPage: React.FC = () => {
     const values = await switchForm.validateFields();
     const durationSeconds = Math.floor((Date.now() - recordStartTimeRef.current) / 1000);
     try {
-      await checkInApi.end(activeRecordId!, {
+      await checkInApi.end(timer.activeRecordId!, {
         content: values.content,
         complete: false,
         durationSeconds,
@@ -448,8 +426,8 @@ const CheckInPage: React.FC = () => {
     pauseForm.resetFields();
     // 拉取之前的记录，回显上一次的学习内容
     try {
-      const records = await checkInApi.getByInstance(activeInstanceId!);
-      const prev = records.filter((r) => r.id !== activeRecordId);
+      const records = await checkInApi.getByInstance(timer.activeInstanceId!);
+      const prev = records.filter((r) => r.id !== timer.activeRecordId);
       // 取最新一条有内容的记录（用户可能在多次暂停中追加修改）
       const lastContent = [...prev].reverse().find((r) => r.content)?.content;
       if (lastContent) {
@@ -462,7 +440,7 @@ const CheckInPage: React.FC = () => {
   const handlePauseSubmit = async () => {
     const values = await pauseForm.validateFields();
     const durationSeconds = Math.floor((Date.now() - recordStartTimeRef.current) / 1000);
-    await checkInApi.end(activeRecordId!, {
+    await checkInApi.end(timer.activeRecordId!, {
       content: values.content,
       complete: false,
       durationSeconds,
@@ -476,13 +454,13 @@ const CheckInPage: React.FC = () => {
   // ===== 结束学习（完成实例） =====
   const handleEndOpen = async () => {
     stopTimer();
-    setEndRecordId(activeRecordId);
+    setEndRecordId(timer.activeRecordId);
     setEndFiles([]);
     endForm.resetFields();
     // 拉取之前的记录，回显学习内容和心得
     try {
-      const records = await checkInApi.getByInstance(activeInstanceId!);
-      const prev = records.filter((r) => r.id !== activeRecordId);
+      const records = await checkInApi.getByInstance(timer.activeInstanceId!);
+      const prev = records.filter((r) => r.id !== timer.activeRecordId);
       // 取最新一条有内容的记录
       const lastContent = [...prev].reverse().find((r) => r.content)?.content;
       const lastNote = [...prev].reverse().find((r) => r.note)?.note;
@@ -672,7 +650,7 @@ const CheckInPage: React.FC = () => {
 
   // 判断当前活跃任务是否就是这个实例
   const isActiveInstance = (instanceId: number) =>
-    activeInstanceId === instanceId && activeRecordId !== null;
+    timer.activeInstanceId === instanceId && timer.isActive;
 
   return (
     <div>
@@ -681,7 +659,7 @@ const CheckInPage: React.FC = () => {
         <p>{today}</p>
       </div>
 
-      {activeRecordId !== null && (
+      {timer.isActive && (
         <Card className="cute-card" style={{
           textAlign: 'center', marginBottom: 24,
           background: 'linear-gradient(135deg, #fff5f7, #fff0f6)',
@@ -725,7 +703,7 @@ const CheckInPage: React.FC = () => {
             style={{ height: 48, borderColor: '#ff6b81', color: '#ff6b81' }}
             className="cute-btn"
             onClick={openStartModal}
-            disabled={activeRecordId !== null}
+            disabled={timer.isActive}
           >
             开始学习
           </Button>
@@ -760,138 +738,18 @@ const CheckInPage: React.FC = () => {
                   {group.goalName}
                 </Text>
                 <Tag className="cute-tag" style={{ fontSize: 11 }}>
-                  {group.todayItems.length + group.overdueItems.length} 项
+                  {group.items.length} 项
                 </Tag>
               </Space>
             }
           >
-            {group.overdueItems.length > 0 && (
-              <>
-                <div className="goal-section-title">⚠️ 逾期未完成</div>
-                <List
-                  size="small"
-                  dataSource={group.overdueItems}
-                  renderItem={(item) => (
-                    <List.Item className="log-row"
-                      actions={
-                        isActiveInstance(item.id)
-                          ? []
-                          : [
-                              ...(item.status === 'COMPLETED'
-                                ? [
-                                  <Tag className="cute-tag" color="success" style={{ padding: '4px 12px' }} key="done">
-                                    已完成 ✓
-                                  </Tag>,
-                                ]
-                                : item.status === 'SKIPPED'
-                                ? [
-                                  <Tag className="cute-tag" color="default" style={{ padding: '4px 12px' }} key="skipped">
-                                    已跳过
-                                  </Tag>,
-                                ]
-                                : item.status === 'DEFERRED'
-                                ? [
-                                  <Tag className="cute-tag" color="default" style={{ padding: '4px 12px' }} key="deferred">
-                                    已延期
-                                  </Tag>,
-                                ]
-                                : [
-                                  <Button
-                                    className="cute-btn"
-                                    type="primary"
-                                    size="small"
-                                    disabled={activeRecordId !== null}
-                                    key="start"
-                                    onClick={() =>
-                                      item.status === 'IN_PROGRESS'
-                                        ? handleResume(item.id)
-                                        : doStartInstance(item.id)
-                                    }
-                                  >
-                                    {item.status === 'IN_PROGRESS' ? '继续学习' : '开始学习'}
-                                  </Button>,
-                                ]),
-                              <Button
-                                type="link"
-                                danger
-                                size="small"
-                                icon={<DeleteOutlined />}
-                                key="delete"
-                                onClick={() => {
-                                  Modal.confirm({
-                                    icon: <DeleteOutlined style={{ color: '#ff6b81' }} />,
-                                    title: '确定删除这条任务吗？',
-                                    className: 'cute-modal',
-                                    centered: true,
-                                    okText: '确定',
-                                    cancelText: '取消',
-                                    okButtonProps: { danger: true, style: { borderRadius: 20 } },
-                                    cancelButtonProps: { style: { borderRadius: 20 } },
-                                    onOk: () => handleDeleteInstance(item.id),
-                                  });
-                                }}
-                              />,
-                            ]
-                      }
-                    >
-                      <List.Item.Meta
-                        avatar={
-                          <span style={{ fontSize: 20 }}>
-                            {isActiveInstance(item.id) ? '⏳' : item.status === 'IN_PROGRESS' ? '⏸️' : STATUS_CONFIG[item.status]?.emoji || '📝'}
-                          </span>
-                        }
-                        title={
-                          <Space>
-                            <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
-                            <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{item.taskName}</span>
-<InfoCircleOutlined
-  style={{ color: '#b8929e', cursor: 'pointer', fontSize: 14 }}
-  onClick={() => setDetailInstanceId(item.id)}
-/>
-                            {(() => {
-                              if (item.repeatRule === 'NONE' && item.taskScheduledDate && item.taskScheduledDate > today) {
-                                const daysLeft = dayjs(item.taskScheduledDate).diff(dayjs(today), 'day');
-                                return (
-                                  <Tag className="cute-tag" color="orange" style={{ fontSize: 11 }}>
-                                    提前开始 · 原定{dayjs(item.taskScheduledDate).format('M月D日')} · 还剩{daysLeft}天
-                                  </Tag>
-                                );
-                              }
-                              return null;
-                            })()}
-                            {item.goalIds && item.goalIds.length > 1 && (
-                              <Tag className="cute-tag" color="processing" style={{ fontSize: 10 }}>
-                                {item.goalIds.length} 个目标
-                              </Tag>
-                            )}
-                            <Text type="secondary" style={{ fontSize: 12, color: '#b8929e' }}>
-                              {item.scheduledDate}
-                            </Text>
-                          </Space>
-                        }
-                        description={
-                          <span style={{ color: STATUS_CONFIG[item.status]?.color || '#b8929e' }}>
-                            {isActiveInstance(item.id)
-                              ? `进行中 ${formatElapsed(timerDisplay)}`
-                              : item.status === 'TODO' ? '待补做'
-                              : item.status === 'IN_PROGRESS' ? '已暂停'
-                              : STATUS_CONFIG[item.status]?.label || '未知'}
-                          </span>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
-              </>
-            )}
-
             {(() => {
-              const activeItems = group.todayItems.filter((i) => i.status !== 'COMPLETED');
-              const completedItems = group.todayItems.filter((i) => i.status === 'COMPLETED');
+              const activeItems = group.items.filter((i) => i.status !== 'COMPLETED');
+              const completedItems = group.items.filter((i) => i.status === 'COMPLETED');
               const groupKey = group.goalId != null ? String(group.goalId) : 'unclassified';
               const showCompleted = expandedCompleted.has(groupKey);
 
-              const renderTaskRow = (item: TaskInstance) => (
+              const renderTaskRow = (item: TaskInstance & { isOverdue: boolean }) => (
                     <List.Item className="log-row"
                       actions={
                         isActiveInstance(item.id)
@@ -903,7 +761,7 @@ const CheckInPage: React.FC = () => {
                                     className="cute-btn"
                                     type="primary"
                                     icon={<PlayCircleOutlined />}
-                                    disabled={activeRecordId !== null}
+                                    disabled={timer.isActive}
                                     key="start"
                                     onClick={() => doStartInstance(item.id)}
                                   >
@@ -916,10 +774,10 @@ const CheckInPage: React.FC = () => {
                                     className="cute-btn"
                                     type="primary"
                                     icon={<PlayCircleOutlined />}
-                                    disabled={activeRecordId !== null}
+                                    disabled={timer.isActive}
                                     key="resume"
                                     onClick={() => handleResume(item.id)}
-                                    style={activeRecordId !== null ? undefined : { background: '#ffa502', borderColor: '#ffa502' }}
+                                    style={timer.isActive ? undefined : { background: '#ffa502', borderColor: '#ffa502' }}
                                   >
                                     继续学习
                                   </Button>,
@@ -974,6 +832,9 @@ const CheckInPage: React.FC = () => {
                         }
                         title={
                           <Space>
+                            {item.isOverdue && (
+                              <Tag color="error" className="cute-tag overdue-pulse">逾期</Tag>
+                            )}
                             <span style={{ color: '#5a3d4a', fontWeight: 600 }}>{item.taskName}</span>
 <InfoCircleOutlined
   style={{ color: '#b8929e', cursor: 'pointer', fontSize: 14 }}
@@ -995,12 +856,18 @@ const CheckInPage: React.FC = () => {
                                 {item.goalIds.length} 个目标
                               </Tag>
                             )}
+                            {item.isOverdue && (
+                              <Text type="secondary" style={{ fontSize: 12, color: '#b8929e' }}>
+                                原定 {item.scheduledDate}
+                              </Text>
+                            )}
                           </Space>
                         }
                         description={
                           <span style={{ color: STATUS_CONFIG[item.status]?.color || '#b8929e' }}>
                             {isActiveInstance(item.id)
                               ? `进行中 ${formatElapsed(timerDisplay)}`
+                              : item.status === 'TODO' && item.isOverdue ? '待补做'
                               : item.status === 'IN_PROGRESS' ? '已暂停'
                               : STATUS_CONFIG[item.status]?.label || '未知'}
                           </span>
@@ -1011,9 +878,6 @@ const CheckInPage: React.FC = () => {
 
               return (
                 <>
-                  {group.overdueItems.length > 0 && (
-                    <Divider style={{ margin: '12px 0', borderColor: '#ffe0e6' }} />
-                  )}
                   {activeItems.length > 0 && (
                     <List size="small" dataSource={activeItems} renderItem={renderTaskRow} />
                   )}
@@ -1332,7 +1196,7 @@ const CheckInPage: React.FC = () => {
                   <Button
                     className="subtle-action"
                     size="small"
-                    disabled={activeRecordId !== null || (detailInstance.deferCount ?? 0) >= 3}
+                    disabled={timer.isActive || (detailInstance.deferCount ?? 0) >= 3}
                     title={(detailInstance.deferCount ?? 0) >= 3 ? '已达到最大延期次数（3次）' : '延至明天'}
                     onClick={async () => {
                       try {
@@ -1349,7 +1213,7 @@ const CheckInPage: React.FC = () => {
                   <Button
                     className="subtle-action"
                     size="small"
-                    disabled={activeRecordId !== null}
+                    disabled={timer.isActive}
                     onClick={async () => {
                       try {
                         await instanceApi.skip(detailInstance.id);

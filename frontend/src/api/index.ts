@@ -102,6 +102,17 @@ export interface CheckInRecord {
   imageUrls: string[];
 }
 
+export interface ActiveSessionResponse {
+  recordId: number;
+  instanceId: number;
+  taskId: number;
+  taskName: string;
+  startTime: string;
+  accumulatedSeconds: number;
+  elapsedSeconds: number;
+  // accumulatedSeconds / elapsedSeconds 是后端的 long 类型，前端 number 可安全表示
+}
+
 export const checkInApi = {
   start: (taskInstanceId: number) =>
     client.post<any, CheckInRecord>('/checkins/start', { taskInstanceId }),
@@ -138,6 +149,7 @@ export const checkInApi = {
     client.get<any, CheckInRecord[]>(`/checkins/by-instance/${instanceId}`),
   getAll: () => client.get<any, CheckInRecord[]>('/checkins'),
   hasActive: () => client.get<any, boolean>('/checkins/has-active'),
+  getActive: () => client.get<any, ActiveSessionResponse | null>('/checkins/active'),
 };
 
 export interface GoalStats {
