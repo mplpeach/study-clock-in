@@ -167,8 +167,10 @@ const CheckInPage: React.FC = () => {
       items: [],
     });
 
-    const sortByStatus = (a: TaskInstance, b: TaskInstance) =>
-      (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
+    const sortByStatus = (a: TaskInstance & { isOverdue: boolean }, b: TaskInstance & { isOverdue: boolean }) => {
+      if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+      return (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
+    };
 
     const pushItems = (instances: TaskInstance[], isOverdue: boolean) => {
       for (const item of instances) {
