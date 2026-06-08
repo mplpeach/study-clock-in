@@ -236,6 +236,12 @@ const GoalsPage: React.FC = () => {
                         </Button>,
                       ]}
                     >
+                      <div style={{ position: 'relative' }}>
+                      {goal.totalDurationMinutes > 0 && (
+                        <span style={{ position: 'absolute', top: 0, right: 0, color: '#b8929e', fontSize: 12 }}>
+                          ⏱️ {formatDuration(goal.totalDurationMinutes)}
+                        </span>
+                      )}
                       <Card.Meta
                         title={
                           <span style={{ fontSize: 16, fontWeight: 600, color: '#5a3d4a' }}>
@@ -268,17 +274,11 @@ const GoalsPage: React.FC = () => {
                                 transition: 'width 0.3s ease',
                               }} />
                             </div>
-                            {goal.totalDurationMinutes > 0 && (
-                              <div style={{ marginTop: 8, textAlign: 'right' }}>
-                                <span style={{ color: '#b8929e', fontSize: 12 }}>
-                                  ⏱️ {formatDuration(goal.totalDurationMinutes)}
-                                </span>
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
                         )}
+                      </div>
                       </div>
                     </Card>
                   </Col>
