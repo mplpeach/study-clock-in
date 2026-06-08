@@ -95,19 +95,22 @@ const StatisticsPage: React.FC = () => {
     },
     series: [
       {
-        type: 'bar',
+        type: 'line',
         data: stats.dailyStats.map((d) => d.durationMinutes).reverse(),
-        itemStyle: {
-          borderRadius: [6, 6, 0, 0],
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { color: '#ff6b81', width: 2 },
+        itemStyle: { color: '#ff6b81' },
+        areaStyle: {
           color: {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: '#ff6b81' },
-              { offset: 1, color: '#ffb8c6' },
+              { offset: 0, color: 'rgba(255, 107, 129, 0.3)' },
+              { offset: 1, color: 'rgba(255, 107, 129, 0.02)' },
             ],
           },
         },
-        barMaxWidth: 24,
       },
     ],
   };
