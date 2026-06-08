@@ -1,6 +1,7 @@
 package com.example.clockin.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import java.util.List;
 
@@ -15,6 +16,20 @@ public class GoalDTO {
     private int completedTaskCount;
     private int totalTaskCount;
     private long totalDurationMinutes;
+    private int oneTimeTaskCount;
+    private int oneTimeCompletedCount;
+    private int recurringTaskCount;
+    private int recurringWeeklyCompleted;
+    private int recurringWeeklyTotal;
+    private List<RecurringTaskStatus> recurringTasks;
+
+    @Data
+    @AllArgsConstructor
+    public static class RecurringTaskStatus {
+        private Long taskId;
+        private String taskName;
+        private boolean completedToday;
+    }
 
     @Data
     public static class CreateRequest {

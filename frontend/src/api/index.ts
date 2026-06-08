@@ -1,5 +1,11 @@
 import client from './client';
 
+export interface RecurringTaskStatus {
+  taskId: number;
+  taskName: string;
+  completedToday: boolean;
+}
+
 export interface Goal {
   id: number;
   name: string;
@@ -10,6 +16,12 @@ export interface Goal {
   completedTaskCount: number;
   totalTaskCount: number;
   totalDurationMinutes: number;
+  oneTimeTaskCount: number;
+  oneTimeCompletedCount: number;
+  recurringTaskCount: number;
+  recurringWeeklyCompleted: number;
+  recurringWeeklyTotal: number;
+  recurringTasks: RecurringTaskStatus[];
 }
 
 export interface Task {

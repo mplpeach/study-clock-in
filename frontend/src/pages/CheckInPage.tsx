@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Card, Button, Checkbox, Modal, Form, Input, Select, TimePicker, message, Row, Col,
-  Tag, Empty, Upload, List, Space, Typography, Divider,
+  Tag, Empty, Upload, List, Space, Typography, Divider, Tooltip,
 } from 'antd';
 import {
   PlayCircleOutlined, PauseCircleOutlined,
@@ -12,7 +12,7 @@ import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
 import { instanceApi, checkInApi, taskApi, goalApi } from '../api';
 import { useTimer } from '../contexts/TimerContext';
-import type { TaskInstance, Task, Goal } from '../api';
+import type { TaskInstance, Task, Goal, RecurringTaskStatus } from '../api';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -36,6 +36,12 @@ interface GoalGroup {
   color: string;
   sortOrder: number;
   items: (TaskInstance & { isOverdue: boolean })[];
+  oneTimeTaskCount: number;
+  oneTimeCompletedCount: number;
+  recurringTaskCount: number;
+  recurringWeeklyCompleted: number;
+  recurringWeeklyTotal: number;
+  recurringTasks: RecurringTaskStatus[];
 }
 
 
@@ -137,6 +143,12 @@ const CheckInPage: React.FC = () => {
         color: g.color,
         sortOrder: g.sortOrder,
         items: [],
+        oneTimeTaskCount: g.oneTimeTaskCount ?? 0,
+        oneTimeCompletedCount: g.oneTimeCompletedCount ?? 0,
+        recurringTaskCount: g.recurringTaskCount ?? 0,
+        recurringWeeklyCompleted: g.recurringWeeklyCompleted ?? 0,
+        recurringWeeklyTotal: g.recurringWeeklyTotal ?? 0,
+        recurringTasks: g.recurringTasks || [],
       });
     }
 
@@ -146,6 +158,12 @@ const CheckInPage: React.FC = () => {
       color: '#b8929e',
       sortOrder: 99999,
       items: [],
+      oneTimeTaskCount: 0,
+      oneTimeCompletedCount: 0,
+      recurringTaskCount: 0,
+      recurringWeeklyCompleted: 0,
+      recurringWeeklyTotal: 0,
+      recurringTasks: [],
     });
 
     const sortByStatus = (a: TaskInstance & { isOverdue: boolean }, b: TaskInstance & { isOverdue: boolean }) => {
@@ -734,6 +752,57 @@ const CheckInPage: React.FC = () => {
               </Space>
             }
           >
+            {/* 一次性任务进度条 */}
+            {group.oneTimeTaskCount > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ color: '#b8929e', fontSize: 12 }}>一次性任务</span>
+                  <span style={{ color: '#5a3d4a', fontSize: 12, fontWeight: 600 }}>
+                    {group.oneTimeCompletedCount}/{group.oneTimeTaskCount}
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: '#fef0f3', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.round((group.oneTimeCompletedCount / group.oneTimeTaskCount) * 100)}%`,
+                    borderRadius: 3,
+                    background: 'linear-gradient(90deg, #ff6b81, #f58ca0, #f9a8d4)',
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {/* 循环习惯指示器 */}
+            {group.recurringTaskCount > 0 && (
+              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ color: '#b8929e', fontSize: 12 }}>
+                  🔥 本周 {group.recurringWeeklyCompleted}/{group.recurringWeeklyTotal}
+                </span>
+                <span style={{ color: '#d4c5cc', fontSize: 12 }}>·</span>
+                <Space size={4}>
+                  {group.recurringTasks.map((rt) => (
+                    <Tooltip key={rt.taskId} title={`${rt.taskName} — ${rt.completedToday ? '已完成 ✅' : '未完成'}`}>
+                      <span style={{
+                        display: 'inline-block',
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background: rt.completedToday ? '#2ed573' : '#e0d5da',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease',
+                      }} />
+                    </Tooltip>
+                  ))}
+                </Space>
+              </div>
+            )}
+
+            {/* 分隔线 */}
+            {(group.oneTimeTaskCount > 0 || group.recurringTaskCount > 0) && group.items.length > 0 && (
+              <div style={{ margin: '8px 0 12px', height: 1, background: '#ffe0e6' }} />
+            )}
+
             {(() => {
               const activeItems = group.items.filter((i) => i.status !== 'COMPLETED');
               const completedItems = group.items.filter((i) => i.status === 'COMPLETED');

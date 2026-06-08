@@ -5,14 +5,19 @@ import com.example.clockin.dto.TaskDTO;
 import com.example.clockin.entity.Goal;
 import com.example.clockin.entity.GoalPageOrder;
 import com.example.clockin.entity.GoalTask;
+import com.example.clockin.entity.Task;
 import com.example.clockin.entity.TaskInstance;
+import com.example.clockin.enums.RepeatRule;
 import com.example.clockin.enums.TaskInstanceStatus;
+import com.example.clockin.enums.TaskStatus;
 import com.example.clockin.repository.*;
 import com.example.clockin.service.GoalService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -122,9 +127,14 @@ public class GoalServiceImpl implements GoalService {
         dto.setColor(goal.getColor());
         dto.setSortOrder(goal.getSortOrder());
 
-        List<TaskDTO> tasks = goalTaskRepository.findByGoalId(goal.getId()).stream()
+        // 获取该目标下所有 Task
+        List<Task> allTasks = goalTaskRepository.findByGoalId(goal.getId()).stream()
                 .map(gt -> taskRepository.findById(gt.getTaskId()).orElse(null))
-                .filter(t -> t != null)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // TaskDTO 列表（保持原有）
+        List<TaskDTO> taskDTOs = allTasks.stream()
                 .map(t -> {
                     TaskDTO td = new TaskDTO();
                     td.setId(t.getId());
@@ -135,17 +145,58 @@ public class GoalServiceImpl implements GoalService {
                     return td;
                 })
                 .collect(Collectors.toList());
-        dto.setTasks(tasks);
-        dto.setTotalTaskCount(tasks.size());
-        dto.setCompletedTaskCount((int) tasks.stream()
+        dto.setTasks(taskDTOs);
+        dto.setTotalTaskCount(taskDTOs.size());
+        dto.setCompletedTaskCount((int) taskDTOs.stream()
                 .filter(t -> "COMPLETED".equals(t.getStatus())).count());
+
+        // 分离一次性 / 循环任务
+        List<Task> oneTimeTasks = allTasks.stream()
+                .filter(t -> t.getRepeatRule() == RepeatRule.NONE)
+                .collect(Collectors.toList());
+        List<Task> recurringTasks = allTasks.stream()
+                .filter(t -> t.getRepeatRule() != RepeatRule.NONE)
+                .collect(Collectors.toList());
+
+        dto.setOneTimeTaskCount(oneTimeTasks.size());
+        dto.setOneTimeCompletedCount((int) oneTimeTasks.stream()
+                .filter(t -> t.getStatus() == TaskStatus.COMPLETED).count());
+
+        dto.setRecurringTaskCount(recurringTasks.size());
+
+        if (!recurringTasks.isEmpty()) {
+            LocalDate today = LocalDate.now();
+            LocalDate weekStart = today.with(DayOfWeek.MONDAY);
+            LocalDate weekEnd = weekStart.plusDays(6);
+
+            // 每个循环任务今日是否完成
+            List<GoalDTO.RecurringTaskStatus> statuses = new ArrayList<>();
+            for (Task rt : recurringTasks) {
+                boolean doneToday = taskInstanceRepository
+                        .findByTaskIdAndScheduledDateAndUserId(rt.getId(), today, goal.getUserId())
+                        .map(ti -> ti.getStatus() == TaskInstanceStatus.COMPLETED)
+                        .orElse(false);
+                statuses.add(new GoalDTO.RecurringTaskStatus(rt.getId(), rt.getName(), doneToday));
+            }
+            dto.setRecurringTasks(statuses);
+
+            // 本周完成次数
+            List<TaskInstance> weekInstances = taskInstanceRepository
+                    .findByUserIdAndScheduledDateBetween(goal.getUserId(), weekStart, weekEnd);
+            Set<Long> recurringTaskIds = recurringTasks.stream()
+                    .map(Task::getId).collect(Collectors.toSet());
+            long weeklyCompleted = weekInstances.stream()
+                    .filter(ti -> recurringTaskIds.contains(ti.getTaskId()))
+                    .filter(ti -> ti.getStatus() == TaskInstanceStatus.COMPLETED)
+                    .count();
+            dto.setRecurringWeeklyCompleted((int) weeklyCompleted);
+            dto.setRecurringWeeklyTotal(recurringTasks.size() * 7);
+        }
 
         // 计算该目标下已完成任务的总学习时长
         long totalDuration = 0;
-        List<Long> taskIds = goalTaskRepository.findByGoalId(goal.getId()).stream()
-                .map(GoalTask::getTaskId).collect(Collectors.toList());
-        for (Long taskId : taskIds) {
-            List<TaskInstance> instances = taskInstanceRepository.findByTaskIdOrderByDateDesc(taskId, goal.getUserId());
+        for (Task task : allTasks) {
+            List<TaskInstance> instances = taskInstanceRepository.findByTaskIdOrderByDateDesc(task.getId(), goal.getUserId());
             totalDuration += instances.stream()
                     .filter(i -> i.getStatus() == TaskInstanceStatus.COMPLETED)
                     .flatMap(i -> checkInRecordRepository.findByTaskInstanceId(i.getId()).stream())
