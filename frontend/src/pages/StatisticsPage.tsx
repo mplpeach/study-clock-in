@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Spin, Empty, Progress, Typography } from 'antd';
+import { Card, Row, Col, Spin, Empty } from 'antd';
 import ReactEChartsCore from 'echarts-for-react';
+import dayjs from 'dayjs';
 import { statisticsApi } from '../api';
 import type { Statistics } from '../api';
-
-const { Text } = Typography;
 
 const statCards = [
   { key: 'currentStreak', icon: '🔥', label: '当前连续天数', variant: 'pink' },
@@ -12,8 +11,6 @@ const statCards = [
   { key: 'totalCheckInDays', icon: '📅', label: '累计打卡天数', variant: 'green' },
   { key: 'totalDurationMinutes', icon: '⏰', label: '总学习时长（分钟）', variant: 'purple' },
 ];
-
-const colors = ['#ff6b81', '#a29bfe', '#2ed573', '#ffa502', '#ff4757', '#c8c4ff'];
 
 const StatisticsPage: React.FC = () => {
   const [stats, setStats] = useState<Statistics | null>(null);
@@ -41,6 +38,41 @@ const StatisticsPage: React.FC = () => {
     const m = minutes % 60;
     return `${h}小时${m}分钟`;
   };
+
+  const formatShortDuration = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0) return `${h}h${m}m`;
+    return `${m}m`;
+  };
+
+  // 本周概览
+  const today = dayjs();
+  const monday = today.startOf('week').add(1, 'day'); // dayjs startOf('week') = Sunday
+  const sunday = monday.add(6, 'day');
+  const lastMonday = monday.subtract(7, 'day');
+  const lastSunday = sunday.subtract(7, 'day');
+
+  const weekStats = (() => {
+    const thisWeek = stats.dailyStats.filter((d) => {
+      const date = dayjs(d.date);
+      return date.isAfter(monday.subtract(1, 'day')) && date.isBefore(sunday.add(1, 'day'));
+    });
+    const lastWeek = stats.dailyStats.filter((d) => {
+      const date = dayjs(d.date);
+      return date.isAfter(lastMonday.subtract(1, 'day')) && date.isBefore(lastSunday.add(1, 'day'));
+    });
+
+    const weekDays = thisWeek.length;
+    const weekDuration = thisWeek.reduce((sum, d) => sum + d.durationMinutes, 0);
+    const avgPerDay = weekDays > 0 ? Math.round(weekDuration / weekDays) : 0;
+    const lastWeekDuration = lastWeek.reduce((sum, d) => sum + d.durationMinutes, 0);
+    const weekDiff = lastWeekDuration > 0
+      ? Math.round(((weekDuration - lastWeekDuration) / lastWeekDuration) * 100)
+      : null;
+
+    return { weekDays, weekDuration, avgPerDay, weekDiff };
+  })();
 
   // 打卡日历热力图
   const heatmapOption = {
@@ -140,6 +172,24 @@ const StatisticsPage: React.FC = () => {
       </Row>
 
       <Row gutter={[16, 16]}>
+        {[
+          { icon: '📅', label: '本周学习天数', value: `${weekStats.weekDays} 天`, variant: 'pink' as const },
+          { icon: '⏱️', label: '本周总时长', value: formatShortDuration(weekStats.weekDuration), variant: 'orange' as const },
+          { icon: '📊', label: '日均学习时长', value: formatShortDuration(weekStats.avgPerDay), variant: 'green' as const },
+          { icon: '📈', label: '较上周变化', value: weekStats.weekDiff === null ? '--' : `${weekStats.weekDiff >= 0 ? '+' : ''}${weekStats.weekDiff}%`, variant: 'purple' as const },
+        ].map((card) => (
+          <Col span={6} key={card.label}>
+            <Card className={`stat-card ${card.variant}`} styles={{ body: { padding: '20px' } }}>
+              <div className="stat-top-bar" />
+              <div className="stat-icon">{card.icon}</div>
+              <div className="stat-value">{card.value}</div>
+              <div className="stat-label">{card.label}</div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col span={24}>
           <Card className="cute-card" title={<span style={{ color: '#5a3d4a' }}>📆 学习日历</span>}>
             <ReactEChartsCore option={heatmapOption} style={{ height: 160 }} />
@@ -148,51 +198,10 @@ const StatisticsPage: React.FC = () => {
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col span={14}>
-          <Card className="cute-card" style={{ height: '100%' }}
+        <Col span={24}>
+          <Card className="cute-card"
             title={<span style={{ color: '#5a3d4a' }}>📈 每日学习时长趋势</span>}>
-            <ReactEChartsCore option={lineOption} style={{ height: 300 }} />
-          </Card>
-        </Col>
-        <Col span={10}>
-          <Card className="cute-card" style={{ height: '100%' }}
-            title={<span style={{ color: '#5a3d4a' }}>🎯 目标任务完成情况</span>}>
-            {stats.goalStats.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 300, overflow: 'auto', paddingRight: 4 }}>
-                {stats.goalStats.map((goal, i) => {
-                  const c = goal.color || colors[i % colors.length];
-                  return (
-                    <div key={goal.goalId} style={{
-                      borderLeft: `3px solid ${c}`,
-                      paddingLeft: 12,
-                      background: '#fff5f7',
-                      borderRadius: 10,
-                      padding: '10px 12px',
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <Text strong style={{ color: '#5a3d4a', fontSize: 14 }}>{goal.goalName}</Text>
-                        <Text style={{ color: '#b8929e', fontSize: 12 }}>
-                          ⏱️ {formatDuration(goal.totalDurationMinutes)}
-                        </Text>
-                      </div>
-                      <Progress
-                        percent={goal.totalTasks > 0 ? Math.round((goal.completedTasks / goal.totalTasks) * 100) : 0}
-                        size="small"
-                        strokeColor={{ '0%': c, '100%': colors[(i + 1) % colors.length] }}
-                        format={() => `${goal.completedTasks}/${goal.totalTasks}`}
-                      />
-                      <div style={{ textAlign: 'right', marginTop: 2 }}>
-                        <Text style={{ color: '#8c6f7a', fontSize: 11 }}>
-                          已完成 {goal.completedTasks} 个，共 {goal.totalTasks} 个任务
-                        </Text>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <Empty description="暂无数据" />
-            )}
+            <ReactEChartsCore option={lineOption} style={{ height: 220 }} />
           </Card>
         </Col>
       </Row>
