@@ -315,19 +315,20 @@ input, textarea {
 }
 
 .cute-btn-outline-purple {
-  border-radius: 20px !important;
-  border: 2px solid #a29bfe !important;
-  color: #a29bfe !important;
+  border-radius: 16px !important;
+  border: 2px solid #ffe0e6 !important;
+  color: #5a3d4a !important;
   background: #fff !important;
+  box-shadow: 0 4px 16px rgba(255, 107, 129, 0.08);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .cute-btn-outline-purple:hover {
-  background: #f8f0ff !important;
-  border-color: #8b7ef0 !important;
-  color: #8b7ef0 !important;
+  background: #fef0f3 !important;
+  border-color: #ffb8c6 !important;
+  color: #ff6b81 !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(162, 155, 254, 0.25);
+  box-shadow: 0 8px 24px rgba(255, 107, 129, 0.15);
 }
 
 .cute-btn-timer {
