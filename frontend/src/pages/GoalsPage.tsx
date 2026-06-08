@@ -3,10 +3,13 @@ import {
   Card, Button, Modal, Form, Input, Row, Col, Tag, Empty, message,
   List, DatePicker, Select, Checkbox, Space, Pagination,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined, CloseOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined, CloseOutlined, MenuOutlined } from '@ant-design/icons';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import dayjs from 'dayjs';
 import { goalApi, taskApi } from '../api';
 import type { Goal, Task } from '../api';
+import SortableGoalItem from '../components/SortableGoalItem';
 
 const GoalsPage: React.FC = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -28,6 +31,14 @@ const GoalsPage: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editRepeatRule, setEditRepeatRule] = useState('NONE');
 
+  const [reorderModalOpen, setReorderModalOpen] = useState(false);
+  const [sortedGoals, setSortedGoals] = useState<Goal[]>([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   const fetchGoals = async () => {
     setLoading(true);
     try {
@@ -39,6 +50,33 @@ const GoalsPage: React.FC = () => {
   };
 
   useEffect(() => { fetchGoals(); }, []);
+
+  const openReorderModal = () => {
+    setSortedGoals([...goals]);
+    setReorderModalOpen(true);
+  };
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setSortedGoals((prev) => {
+      const oldIndex = prev.findIndex((g) => g.id === active.id);
+      const newIndex = prev.findIndex((g) => g.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
+
+  const handleReorderSave = async () => {
+    try {
+      const items = sortedGoals.map((g, i) => ({ id: g.id, sortOrder: i }));
+      await goalApi.reorder(items);
+      message.success('排序已保存 ~ 📐');
+      setReorderModalOpen(false);
+      fetchGoals();
+    } catch (e: any) {
+      message.error(e?.message || '保存失败');
+    }
+  };
 
   const openCreate = () => {
     setEditingGoal(null);
@@ -142,9 +180,14 @@ const GoalsPage: React.FC = () => {
           <h2>🎯 学习目标</h2>
           <p>管理你的学习大方向</p>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} className="cute-btn">
-          新建目标
-        </Button>
+        <Space>
+          <Button icon={<MenuOutlined />} onClick={openReorderModal} className="cute-btn-outline-purple">
+            调整排序
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} className="cute-btn">
+            新建目标
+          </Button>
+        </Space>
       </div>
 
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
@@ -379,6 +422,36 @@ const GoalsPage: React.FC = () => {
             </Form.Item>
           )}
         </Form>
+      </Modal>
+
+      {/* ===== 调整排序 Modal ===== */}
+      <Modal
+        className="cute-modal"
+        title="📐 调整目标排序"
+        open={reorderModalOpen}
+        onOk={handleReorderSave}
+        onCancel={() => setReorderModalOpen(false)}
+        okText="保存排序"
+        cancelText="取消"
+        centered
+      >
+        <p style={{ color: '#b8929e', fontSize: 13, marginBottom: 16 }}>
+          拖拽目标调整顺序，靠前的目标将优先展示在各个页面顶部。
+        </p>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={sortedGoals.map((g) => g.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {sortedGoals.map((goal) => (
+              <SortableGoalItem key={goal.id} id={goal.id} goal={goal} />
+            ))}
+          </SortableContext>
+        </DndContext>
       </Modal>
     </div>
   );

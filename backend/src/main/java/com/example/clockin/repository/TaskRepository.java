@@ -9,9 +9,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
-    List<Task> findByUserId(Long userId);
+    List<Task> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    @Query("SELECT t FROM Task t JOIN GoalTask gt ON t.id = gt.taskId WHERE gt.goalId = :goalId")
+    @Query("SELECT t FROM Task t JOIN GoalTask gt ON t.id = gt.taskId WHERE gt.goalId = :goalId ORDER BY t.createdAt DESC")
     List<Task> findByGoalId(@Param("goalId") Long goalId);
 
     @Query("SELECT t FROM Task t WHERE t.userId = :userId AND t.name LIKE %:keyword%")

@@ -117,7 +117,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskDTO> getUserTasks(Long userId) {
-        return taskRepository.findByUserId(userId).stream()
+        return taskRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toDTO).collect(Collectors.toList());
     }
 
@@ -224,6 +224,7 @@ public class TaskServiceImpl implements TaskService {
         dto.setWeeklyDays(task.getWeeklyDays());
         dto.setScheduledDate(task.getScheduledDate() != null ? task.getScheduledDate().toString() : null);
         dto.setStatus(task.getStatus() != null ? task.getStatus().name() : TaskStatus.ACTIVE.name());
+        dto.setCreatedAt(task.getCreatedAt());
         java.util.List<Long> goalIds = goalTaskRepository.findByTaskId(task.getId())
                 .stream().map(GoalTask::getGoalId).collect(Collectors.toList());
         dto.setGoalIds(goalIds);

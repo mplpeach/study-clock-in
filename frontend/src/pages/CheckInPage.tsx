@@ -15,8 +15,8 @@ import { useTimer } from '../contexts/TimerContext';
 import type { TaskInstance, Task, Goal } from '../api';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import SortableGoalItem from '../components/SortableGoalItem';
 
 const { TextArea } = Input;
 const { Dragger } = Upload;
@@ -38,25 +38,6 @@ interface GoalGroup {
   items: (TaskInstance & { isOverdue: boolean })[];
 }
 
-const SortableGoalItem: React.FC<{ id: number; goal: Goal }> = ({ id, goal }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className={`sort-item${isDragging ? ' dragging' : ''}`} {...attributes}>
-      <span className="sort-item-handle" {...listeners}>
-        <MenuOutlined />
-      </span>
-      <span className="goal-color-dot" style={{ background: goal.color }} />
-      <span className="sort-item-name">{goal.name}</span>
-    </div>
-  );
-};
 
 const CheckInPage: React.FC = () => {
   const [todayInstances, setTodayInstances] = useState<TaskInstance[]>([]);

@@ -3,10 +3,13 @@ import {
   Card, Button, Modal, Form, Input, Select, DatePicker, Checkbox, Table, Tag, message, Space,
   Tabs, Collapse, Empty,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined, CaretRightOutlined, MenuOutlined } from '@ant-design/icons';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import dayjs from 'dayjs';
 import { taskApi, goalApi, instanceApi, checkInApi } from '../api';
 import type { Task, Goal, TaskInstance } from '../api';
+import SortableGoalItem from '../components/SortableGoalItem';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const { Panel } = Collapse;
@@ -35,6 +38,14 @@ const TasksPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const goalIdFilter = searchParams.get('goalId');
+
+  const [reorderModalOpen, setReorderModalOpen] = useState(false);
+  const [sortedGoals, setSortedGoals] = useState<Goal[]>([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -143,6 +154,33 @@ const TasksPage: React.FC = () => {
     }
   };
 
+  const openReorderModal = () => {
+    setSortedGoals([...goals]);
+    setReorderModalOpen(true);
+  };
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setSortedGoals((prev) => {
+      const oldIndex = prev.findIndex((g) => g.id === active.id);
+      const newIndex = prev.findIndex((g) => g.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
+
+  const handleReorderSave = async () => {
+    try {
+      const items = sortedGoals.map((g, i) => ({ id: g.id, sortOrder: i }));
+      await goalApi.reorder(items);
+      message.success('排序已保存 ~ 📐');
+      setReorderModalOpen(false);
+      fetchGoals();
+    } catch (e: any) {
+      message.error(e?.message || '保存失败');
+    }
+  };
+
   // ---- 分组与筛选 ----
 
   const isRecurring = (task: Task) =>
@@ -188,7 +226,14 @@ const TasksPage: React.FC = () => {
       }
     }
 
-    return Array.from(map.values());
+    return Array.from(map.values()).map((g) => ({
+      ...g,
+      tasks: [...g.tasks].sort((a, b) => {
+        const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return db - da; // 倒序：新创建的在前
+      }),
+    }));
   };
 
   const getFilteredTasks = (tab: string) => {
@@ -427,6 +472,9 @@ const TasksPage: React.FC = () => {
             onSearch={handleSearch}
             style={{ width: 200 }}
           />
+          <Button icon={<MenuOutlined />} onClick={openReorderModal} className="cute-btn-outline-purple">
+            调整排序
+          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} className="cute-btn">
             新建任务
           </Button>
@@ -515,6 +563,35 @@ const TasksPage: React.FC = () => {
         </Form>
       </Modal>
 
+      {/* ===== 调整排序 Modal ===== */}
+      <Modal
+        className="cute-modal"
+        title="📐 调整目标排序"
+        open={reorderModalOpen}
+        onOk={handleReorderSave}
+        onCancel={() => setReorderModalOpen(false)}
+        okText="保存排序"
+        cancelText="取消"
+        centered
+      >
+        <p style={{ color: '#b8929e', fontSize: 13, marginBottom: 16 }}>
+          拖拽目标调整顺序，靠前的目标将优先展示在任务列表顶部。
+        </p>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={sortedGoals.map((g) => g.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {sortedGoals.map((goal) => (
+              <SortableGoalItem key={goal.id} id={goal.id} goal={goal} />
+            ))}
+          </SortableContext>
+        </DndContext>
+      </Modal>
     </div>
   );
 };

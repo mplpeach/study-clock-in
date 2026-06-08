@@ -14,6 +14,7 @@ public class TaskDTO {
     private String repeatRule;
     private String weeklyDays;
     private String status;
+    private java.time.LocalDateTime createdAt;
 
     @Data
     public static class CreateRequest {

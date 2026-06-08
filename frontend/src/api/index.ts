@@ -21,6 +21,7 @@ export interface Task {
   repeatRule?: string;
   weeklyDays?: string;
   status?: string;
+  createdAt?: string;
 }
 
 export const goalApi = {
