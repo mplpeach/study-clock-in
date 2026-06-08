@@ -14,6 +14,7 @@ public class GoalDTO {
     private List<TaskDTO> tasks;
     private int completedTaskCount;
     private int totalTaskCount;
+    private long totalDurationMinutes;
 
     @Data
     public static class CreateRequest {

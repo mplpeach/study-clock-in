@@ -5,10 +5,9 @@ import com.example.clockin.dto.TaskDTO;
 import com.example.clockin.entity.Goal;
 import com.example.clockin.entity.GoalPageOrder;
 import com.example.clockin.entity.GoalTask;
-import com.example.clockin.repository.GoalPageOrderRepository;
-import com.example.clockin.repository.GoalRepository;
-import com.example.clockin.repository.GoalTaskRepository;
-import com.example.clockin.repository.TaskRepository;
+import com.example.clockin.entity.TaskInstance;
+import com.example.clockin.enums.TaskInstanceStatus;
+import com.example.clockin.repository.*;
 import com.example.clockin.service.GoalService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
@@ -24,15 +23,21 @@ public class GoalServiceImpl implements GoalService {
     private final GoalTaskRepository goalTaskRepository;
     private final TaskRepository taskRepository;
     private final GoalPageOrderRepository goalPageOrderRepository;
+    private final CheckInRecordRepository checkInRecordRepository;
+    private final TaskInstanceRepository taskInstanceRepository;
 
     public GoalServiceImpl(GoalRepository goalRepository,
                            GoalTaskRepository goalTaskRepository,
                            TaskRepository taskRepository,
-                           GoalPageOrderRepository goalPageOrderRepository) {
+                           GoalPageOrderRepository goalPageOrderRepository,
+                           CheckInRecordRepository checkInRecordRepository,
+                           TaskInstanceRepository taskInstanceRepository) {
         this.goalRepository = goalRepository;
         this.goalTaskRepository = goalTaskRepository;
         this.taskRepository = taskRepository;
         this.goalPageOrderRepository = goalPageOrderRepository;
+        this.checkInRecordRepository = checkInRecordRepository;
+        this.taskInstanceRepository = taskInstanceRepository;
     }
 
     @Override
@@ -134,6 +139,22 @@ public class GoalServiceImpl implements GoalService {
         dto.setTotalTaskCount(tasks.size());
         dto.setCompletedTaskCount((int) tasks.stream()
                 .filter(t -> "COMPLETED".equals(t.getStatus())).count());
+
+        // 计算该目标下已完成任务的总学习时长
+        long totalDuration = 0;
+        List<Long> taskIds = goalTaskRepository.findByGoalId(goal.getId()).stream()
+                .map(GoalTask::getTaskId).collect(Collectors.toList());
+        for (Long taskId : taskIds) {
+            List<TaskInstance> instances = taskInstanceRepository.findByTaskIdOrderByDateDesc(taskId, goal.getUserId());
+            totalDuration += instances.stream()
+                    .filter(i -> i.getStatus() == TaskInstanceStatus.COMPLETED)
+                    .flatMap(i -> checkInRecordRepository.findByTaskInstanceId(i.getId()).stream())
+                    .filter(r -> r.getDurationMinutes() != null)
+                    .mapToLong(r -> r.getDurationMinutes().longValue())
+                    .sum();
+        }
+        dto.setTotalDurationMinutes(totalDuration);
+
         return dto;
     }
 }

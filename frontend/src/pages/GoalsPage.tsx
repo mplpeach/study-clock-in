@@ -39,6 +39,13 @@ const GoalsPage: React.FC = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const formatDuration = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0) return `${h}小时${m}分钟`;
+    return `${m}分钟`;
+  };
+
   const fetchGoals = async () => {
     setLoading(true);
     try {
@@ -261,6 +268,13 @@ const GoalsPage: React.FC = () => {
                                 transition: 'width 0.3s ease',
                               }} />
                             </div>
+                            {goal.totalDurationMinutes > 0 && (
+                              <div style={{ marginTop: 8, textAlign: 'right' }}>
+                                <span style={{ color: '#b8929e', fontSize: 12 }}>
+                                  ⏱️ {formatDuration(goal.totalDurationMinutes)}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>

@@ -9,6 +9,7 @@ export interface Goal {
   tasks: Task[];
   completedTaskCount: number;
   totalTaskCount: number;
+  totalDurationMinutes: number;
 }
 
 export interface Task {
