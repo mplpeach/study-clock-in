@@ -21,8 +21,8 @@ public class GoalController {
     }
 
     @GetMapping
-    public ApiResponse<List<GoalDTO>> getAll() {
-        return ApiResponse.success(goalService.getUserGoals(DEFAULT_USER_ID));
+    public ApiResponse<List<GoalDTO>> getAll(@RequestParam(defaultValue = "goals") String page) {
+        return ApiResponse.success(goalService.getUserGoals(DEFAULT_USER_ID, page));
     }
 
     @GetMapping("/{id}")

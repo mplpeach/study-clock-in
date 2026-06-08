@@ -42,7 +42,7 @@ const GoalsPage: React.FC = () => {
   const fetchGoals = async () => {
     setLoading(true);
     try {
-      const data = await goalApi.getAll();
+      const data = await goalApi.getAll('goals');
       setGoals(data);
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ const GoalsPage: React.FC = () => {
   const handleReorderSave = async () => {
     try {
       const items = sortedGoals.map((g, i) => ({ id: g.id, sortOrder: i }));
-      await goalApi.reorder(items);
+      await goalApi.reorder(items, 'goals');
       message.success('排序已保存 ~ 📐');
       setReorderModalOpen(false);
       fetchGoals();

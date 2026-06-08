@@ -63,7 +63,7 @@ const TasksPage: React.FC = () => {
   };
 
   const fetchGoals = async () => {
-    const data = await goalApi.getAll();
+    const data = await goalApi.getAll('tasks');
     setGoals(data);
   };
 
@@ -172,7 +172,7 @@ const TasksPage: React.FC = () => {
   const handleReorderSave = async () => {
     try {
       const items = sortedGoals.map((g, i) => ({ id: g.id, sortOrder: i }));
-      await goalApi.reorder(items);
+      await goalApi.reorder(items, 'tasks');
       message.success('排序已保存 ~ 📐');
       setReorderModalOpen(false);
       fetchGoals();
@@ -226,7 +226,17 @@ const TasksPage: React.FC = () => {
       }
     }
 
-    return Array.from(map.values()).map((g) => ({
+    // 按 goals 数组顺序排序分组（goals 已按页面排序返回）
+    const goalIndexMap = new Map(goals.map((g, i) => [g.id, i]));
+    return Array.from(map.values())
+      .sort((a, b) => {
+        if (a.goalId === 0) return 1;  // 未分类永远放最后
+        if (b.goalId === 0) return -1;
+        const ia = goalIndexMap.get(a.goalId) ?? 999;
+        const ib = goalIndexMap.get(b.goalId) ?? 999;
+        return ia - ib;
+      })
+      .map((g) => ({
       ...g,
       tasks: [...g.tasks].sort((a, b) => {
         const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;

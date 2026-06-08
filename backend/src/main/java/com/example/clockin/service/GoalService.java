@@ -8,6 +8,6 @@ public interface GoalService {
     GoalDTO updateGoal(Long goalId, GoalDTO.UpdateRequest request);
     void deleteGoal(Long goalId);
     GoalDTO getGoal(Long goalId);
-    List<GoalDTO> getUserGoals(Long userId);
+    List<GoalDTO> getUserGoals(Long userId, String page);
     void reorderGoals(GoalDTO.ReorderRequest request);
 }

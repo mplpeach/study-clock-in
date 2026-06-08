@@ -25,14 +25,14 @@ export interface Task {
 }
 
 export const goalApi = {
-  getAll: () => client.get<any, Goal[]>('/goals'),
+  getAll: (page?: string) => client.get<any, Goal[]>('/goals', { params: page ? { page } : undefined }),
   getById: (id: number) => client.get<any, Goal>(`/goals/${id}`),
   create: (data: { name: string; description?: string; color?: string }) =>
     client.post<any, Goal>('/goals', data),
   update: (id: number, data: { name?: string; description?: string; color?: string; sortOrder?: number }) =>
     client.put<any, Goal>(`/goals/${id}`, data),
-  reorder: (items: { id: number; sortOrder: number }[]) =>
-    client.put<any, void>('/goals/reorder', { items }),
+  reorder: (items: { id: number; sortOrder: number }[], page: string) =>
+    client.put<any, void>('/goals/reorder', { items, page }),
   delete: (id: number) => client.delete(`/goals/${id}`),
 };
 

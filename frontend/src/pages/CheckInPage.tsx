@@ -89,7 +89,7 @@ const CheckInPage: React.FC = () => {
       const [instances, overdue, allGoals, allTasks] = await Promise.all([
         instanceApi.getByDate(today),
         instanceApi.getOverdue(),
-        goalApi.getAll(),
+        goalApi.getAll('checkin'),
         taskApi.getAll(),
       ]);
       setTodayInstances(instances);
@@ -178,9 +178,17 @@ const CheckInPage: React.FC = () => {
       group.items.sort(sortByStatus);
     }
 
+    // 按 API 返回的 goals 数组顺序排列（API 已按页面排序）
+    const goalIndex = new Map(goals.map((g, i) => [g.id, i]));
     return Array.from(map.values())
       .filter((g) => g.items.length > 0)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+      .sort((a, b) => {
+        if (a.goalId == null) return 1;
+        if (b.goalId == null) return -1;
+        const ia = goalIndex.get(a.goalId) ?? 999;
+        const ib = goalIndex.get(b.goalId) ?? 999;
+        return ia - ib;
+      });
   }, [goals, todayInstances, overdueInstances]);
 
   const timerDisplay = timer.accumulatedElapsed + elapsed;
@@ -523,7 +531,7 @@ const CheckInPage: React.FC = () => {
 
   // ===== 目标排序 =====
   const openReorderModal = () => {
-    const sorted = [...goals].sort((a, b) => a.sortOrder - b.sortOrder);
+    const sorted = [...goals]; // goals 已由 API 按页面排序返回
     setSortedGoals(sorted);
     setReorderModalOpen(true);
   };
@@ -542,7 +550,7 @@ const CheckInPage: React.FC = () => {
   const handleReorderSave = async () => {
     try {
       const items = sortedGoals.map((g, i) => ({ id: g.id, sortOrder: i }));
-      await goalApi.reorder(items);
+      await goalApi.reorder(items, 'checkin');
       message.success('排序已保存~ 📐');
       setReorderModalOpen(false);
       fetchData();

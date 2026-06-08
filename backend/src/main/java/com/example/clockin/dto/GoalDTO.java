@@ -35,6 +35,7 @@ public class GoalDTO {
     @Data
     public static class ReorderRequest {
         private List<ReorderItem> items;
+        private String page;
     }
 
     @Data
