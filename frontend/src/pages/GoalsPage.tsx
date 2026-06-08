@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Button, Modal, Form, Input, Row, Col, Tag, Empty, message,
-  List, DatePicker, Select, Checkbox, Space, Pagination,
+  List, DatePicker, Select, Checkbox, Space, Pagination, Tooltip,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined, CloseOutlined, MenuOutlined } from '@ant-design/icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -252,30 +252,66 @@ const GoalsPage: React.FC = () => {
                         description={goal.description || '暂无描述'}
                       />
                       <div style={{ marginTop: 12 }}>
-                        {goal.totalTaskCount > 0 ? (
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                              <span style={{ color: '#b8929e', fontSize: 12 }}>任务进度</span>
+                        {goal.oneTimeTaskCount > 0 && (
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                              <span style={{ color: '#b8929e', fontSize: 12 }}>一次性任务</span>
                               <span style={{ color: '#5a3d4a', fontSize: 12, fontWeight: 600 }}>
-                                已完成 {goal.completedTaskCount}/{goal.totalTaskCount}
+                                {goal.oneTimeCompletedCount}/{goal.oneTimeTaskCount}
                               </span>
                             </div>
-                            <div style={{
-                              height: 6,
-                              borderRadius: 3,
-                              background: '#fef0f3',
-                              overflow: 'hidden',
-                            }}>
+                            <div style={{ height: 6, borderRadius: 3, background: '#fef0f3', overflow: 'hidden' }}>
                               <div style={{
                                 height: '100%',
-                                width: `${Math.round((goal.completedTaskCount / goal.totalTaskCount) * 100)}%`,
+                                width: `${Math.round((goal.oneTimeCompletedCount / goal.oneTimeTaskCount) * 100)}%`,
                                 borderRadius: 3,
                                 background: 'linear-gradient(90deg, #ff6b81, #f58ca0, #f9a8d4)',
                                 transition: 'width 0.3s ease',
                               }} />
                             </div>
                           </div>
-                        ) : (
+                        )}
+                        {goal.recurringTaskCount > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ color: '#b8929e', fontSize: 12 }}>
+                              🔥 本周 {goal.recurringWeeklyCompleted}/{goal.recurringWeeklyTotal}
+                            </span>
+                            <span style={{ color: '#d4c5cc', fontSize: 12 }}>·</span>
+                            <Space size={16}>
+                              {goal.recurringTasks.map((rt) => (
+                                <Tooltip
+                                  key={rt.taskId}
+                                  title={`${rt.taskName} — ${rt.completedToday ? '已完成 ✅' : '未完成'}`}
+                                  overlayInnerStyle={{
+                                    background: '#fff5f7',
+                                    color: '#5a3d4a',
+                                    borderRadius: 12,
+                                    border: '1px solid #ffe0e6',
+                                    fontSize: 13,
+                                    padding: '6px 12px',
+                                    boxShadow: '0 4px 12px rgba(255,107,129,0.15)',
+                                  }}
+                                >
+                                  <span style={{
+                                    display: 'inline-block',
+                                    width: 14,
+                                    height: 14,
+                                    borderRadius: '50%',
+                                    background: rt.completedToday
+                                      ? 'radial-gradient(circle at 35% 35%, #5aeb7a, #2ed573)'
+                                      : 'radial-gradient(circle at 35% 35%, #ede0e4, #d5c9ce)',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                    boxShadow: rt.completedToday
+                                      ? '0 2px 6px rgba(46,213,115,0.45)'
+                                      : '0 2px 4px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(0,0,0,0.06)',
+                                  }} />
+                                </Tooltip>
+                              ))}
+                            </Space>
+                          </div>
+                        )}
+                        {goal.oneTimeTaskCount === 0 && goal.recurringTaskCount === 0 && goal.totalTaskCount === 0 && (
                           <span style={{ color: '#b8929e', fontSize: 13 }}>还未关联任务</span>
                         )}
                       </div>
