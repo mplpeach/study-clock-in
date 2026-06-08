@@ -10,6 +10,7 @@ public class StatisticsDTO {
     private int currentStreak;
     private int longestStreak;
     private long totalDurationMinutes;
+    private int weeklyCompletedTasks;
 
     private List<DailyStats> dailyStats;
 

@@ -60,6 +60,17 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         stats.setGoalStats(getGoalStats(userId));
 
+        // 本周完成任务
+        LocalDate today = LocalDate.now();
+        java.time.DayOfWeek dayOfWeek = today.getDayOfWeek();
+        int offset = (dayOfWeek == java.time.DayOfWeek.SUNDAY) ? 6 : dayOfWeek.getValue() - 1;
+        LocalDate monday = today.minusDays(offset);
+        LocalDate sunday = monday.plusDays(6);
+        stats.setWeeklyCompletedTasks(
+            (int) instanceRepository.countByUserIdAndStatusAndScheduledDateBetween(
+                userId, TaskInstanceStatus.COMPLETED, monday, sunday)
+        );
+
         return stats;
     }
 

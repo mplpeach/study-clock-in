@@ -39,39 +39,21 @@ const StatisticsPage: React.FC = () => {
     return `${h}小时${m}分钟`;
   };
 
-  const formatShortDuration = (minutes: number) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (h > 0) return `${h}h${m}m`;
-    return `${m}m`;
-  };
-
   // 本周概览
   const today = dayjs();
   const monday = today.startOf('week').add(1, 'day'); // dayjs startOf('week') = Sunday
   const sunday = monday.add(6, 'day');
-  const lastMonday = monday.subtract(7, 'day');
-  const lastSunday = sunday.subtract(7, 'day');
-
   const weekStats = (() => {
     const thisWeek = stats.dailyStats.filter((d) => {
       const date = dayjs(d.date);
       return date.isAfter(monday.subtract(1, 'day')) && date.isBefore(sunday.add(1, 'day'));
     });
-    const lastWeek = stats.dailyStats.filter((d) => {
-      const date = dayjs(d.date);
-      return date.isAfter(lastMonday.subtract(1, 'day')) && date.isBefore(lastSunday.add(1, 'day'));
-    });
 
     const weekDays = thisWeek.length;
     const weekDuration = thisWeek.reduce((sum, d) => sum + d.durationMinutes, 0);
     const avgPerDay = weekDays > 0 ? Math.round(weekDuration / weekDays) : 0;
-    const lastWeekDuration = lastWeek.reduce((sum, d) => sum + d.durationMinutes, 0);
-    const weekDiff = lastWeekDuration > 0
-      ? Math.round(((weekDuration - lastWeekDuration) / lastWeekDuration) * 100)
-      : null;
 
-    return { weekDays, weekDuration, avgPerDay, weekDiff };
+    return { weekDays, weekDuration, avgPerDay };
   })();
 
   // 打卡日历热力图
@@ -154,7 +136,19 @@ const StatisticsPage: React.FC = () => {
         <p>你的学习成果总览</p>
       </div>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        <div style={{
+          width: 36, flexShrink: 0,
+          background: '#fff', borderRadius: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          writingMode: 'vertical-rl', fontSize: 13, fontWeight: 600,
+          color: '#b8929e', letterSpacing: 4,
+          boxShadow: '0 4px 16px rgba(255, 107, 129, 0.08)',
+          border: '2px solid #ffe0e6',
+        }}>
+          累计概览
+        </div>
+        <Row gutter={[16, 16]} style={{ flex: 1, marginBottom: 0 }}>
         {statCards.map((card) => {
           const value = stats[card.key as keyof Statistics] as number;
           const displayValue = card.key === 'totalDurationMinutes' ? formatDuration(value) : value;
@@ -169,14 +163,27 @@ const StatisticsPage: React.FC = () => {
             </Col>
           );
         })}
-      </Row>
+        </Row>
+      </div>
 
-      <Row gutter={[16, 16]}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{
+          width: 36, flexShrink: 0,
+          background: '#fff', borderRadius: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          writingMode: 'vertical-rl', fontSize: 13, fontWeight: 600,
+          color: '#b8929e', letterSpacing: 4,
+          boxShadow: '0 4px 16px rgba(255, 107, 129, 0.08)',
+          border: '2px solid #ffe0e6',
+        }}>
+          本周概览
+        </div>
+        <Row gutter={[16, 16]} style={{ flex: 1, marginBottom: 0 }}>
         {[
           { icon: '📅', label: '本周学习天数', value: `${weekStats.weekDays} 天`, variant: 'pink' as const },
-          { icon: '⏱️', label: '本周总时长', value: formatShortDuration(weekStats.weekDuration), variant: 'orange' as const },
-          { icon: '📊', label: '日均学习时长', value: formatShortDuration(weekStats.avgPerDay), variant: 'green' as const },
-          { icon: '📈', label: '较上周变化', value: weekStats.weekDiff === null ? '--' : `${weekStats.weekDiff >= 0 ? '+' : ''}${weekStats.weekDiff}%`, variant: 'purple' as const },
+          { icon: '⏱️', label: '本周总时长', value: formatDuration(weekStats.weekDuration), variant: 'orange' as const },
+          { icon: '📊', label: '日均学习时长', value: formatDuration(weekStats.avgPerDay), variant: 'green' as const },
+          { icon: '✅', label: '本周完成任务', value: `${stats.weeklyCompletedTasks} 个`, variant: 'purple' as const },
         ].map((card) => (
           <Col span={6} key={card.label}>
             <Card className={`stat-card ${card.variant}`} styles={{ body: { padding: '20px' } }}>
@@ -187,7 +194,8 @@ const StatisticsPage: React.FC = () => {
             </Card>
           </Col>
         ))}
-      </Row>
+        </Row>
+      </div>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col span={24}>

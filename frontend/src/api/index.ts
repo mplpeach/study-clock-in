@@ -192,6 +192,7 @@ export interface Statistics {
   currentStreak: number;
   longestStreak: number;
   totalDurationMinutes: number;
+  weeklyCompletedTasks: number;
   dailyStats: DailyStats[];
   goalStats: GoalStats[];
 }
