@@ -58,7 +58,7 @@ const StatisticsPage: React.FC = () => {
 
   // 打卡日历热力图
   const heatmapOption = {
-    tooltip: { trigger: 'item', formatter: '{b0}: {c} 分钟' },
+    tooltip: { trigger: 'item', formatter: (params: any) => `${params.value[0]}: ${params.value[1]} 分钟` },
     grid: { left: 0, right: 0, top: 0, bottom: 0 },
     calendar: {
       range: '2026',
@@ -200,7 +200,7 @@ const StatisticsPage: React.FC = () => {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col span={24}>
           <Card className="cute-card" title={<span style={{ color: '#5a3d4a' }}>📆 学习日历</span>}>
-            <ReactEChartsCore option={heatmapOption} style={{ height: 160 }} />
+            <ReactEChartsCore option={heatmapOption} style={{ height: 200 }} />
           </Card>
         </Col>
       </Row>
