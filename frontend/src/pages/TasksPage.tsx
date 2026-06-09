@@ -552,7 +552,8 @@ const TasksPage: React.FC = () => {
           </Form.Item>
           {repeatRule === 'NONE' && (
             <Form.Item name="scheduledDate" label="安排日期（选填）">
-              <DatePicker className="cute-input" style={{ width: '100%' }} placeholder="选择具体日期" />
+              <DatePicker className="cute-input" style={{ width: '100%' }} placeholder="选择具体日期"
+                disabledDate={(current) => current && current < dayjs().startOf('day')} />
             </Form.Item>
           )}
           {repeatRule === 'WEEKLY' && (
