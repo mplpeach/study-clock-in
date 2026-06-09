@@ -79,12 +79,21 @@ public class TaskServiceImpl implements TaskService {
             task.setWeeklyDays(request.getWeeklyDays());
         }
         if (request.getScheduledDate() != null) {
+            LocalDate oldDate = task.getScheduledDate();
             if (!request.getScheduledDate().isBlank()) {
-                LocalDate date = LocalDate.parse(request.getScheduledDate());
-                task.setScheduledDate(date);
-                taskInstanceService.createInstance(task.getUserId(), task.getId(), date);
+                LocalDate newDate = LocalDate.parse(request.getScheduledDate());
+                task.setScheduledDate(newDate);
+                taskInstanceService.createInstance(task.getUserId(), task.getId(), newDate);
+                if (oldDate != null && !oldDate.equals(newDate)) {
+                    taskInstanceService.deleteTodoInstanceByTaskAndDate(
+                            task.getUserId(), task.getId(), oldDate);
+                }
             } else {
                 task.setScheduledDate(null);
+                if (oldDate != null) {
+                    taskInstanceService.deleteTodoInstanceByTaskAndDate(
+                            task.getUserId(), task.getId(), oldDate);
+                }
             }
         }
         task = taskRepository.save(task);

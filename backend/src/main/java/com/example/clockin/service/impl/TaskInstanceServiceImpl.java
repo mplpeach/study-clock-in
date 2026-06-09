@@ -125,6 +125,17 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
 
     @Override
     @Transactional
+    public void deleteTodoInstanceByTaskAndDate(Long userId, Long taskId, LocalDate scheduledDate) {
+        instanceRepository.findByTaskIdAndScheduledDateAndUserId(taskId, scheduledDate, userId)
+                .ifPresent(instance -> {
+                    if (instance.getStatus() == TaskInstanceStatus.TODO) {
+                        deleteInstance(instance.getId());
+                    }
+                });
+    }
+
+    @Override
+    @Transactional
     public TaskInstanceDTO deferInstance(Long instanceId) {
         TaskInstance instance = instanceRepository.findById(instanceId)
                 .orElseThrow(() -> new EntityNotFoundException("任务实例不存在"));
