@@ -125,13 +125,15 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
 
     @Override
     @Transactional
-    public void deleteTodoInstanceByTaskAndDate(Long userId, Long taskId, LocalDate scheduledDate) {
-        instanceRepository.findByTaskIdAndScheduledDateAndUserId(taskId, scheduledDate, userId)
-                .ifPresent(instance -> {
-                    if (instance.getStatus() == TaskInstanceStatus.TODO) {
-                        deleteInstance(instance.getId());
-                    }
-                });
+    public void deleteInactiveInstancesForTask(Long userId, Long taskId, LocalDate keepDate) {
+        List<TaskInstance> instances = instanceRepository
+                .findByTaskIdAndUserIdAndStatusIn(taskId, userId,
+                        List.of(TaskInstanceStatus.TODO, TaskInstanceStatus.DEFERRED));
+        for (TaskInstance instance : instances) {
+            if (keepDate == null || !instance.getScheduledDate().equals(keepDate)) {
+                deleteInstance(instance.getId());
+            }
+        }
     }
 
     @Override

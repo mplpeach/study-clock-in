@@ -29,5 +29,7 @@ public interface TaskInstanceRepository extends JpaRepository<TaskInstance, Long
 
     List<TaskInstance> findByTaskId(Long taskId);
 
+    List<TaskInstance> findByTaskIdAndUserIdAndStatusIn(Long taskId, Long userId, List<TaskInstanceStatus> statuses);
+
     long countByUserIdAndStatusAndScheduledDateBetween(Long userId, TaskInstanceStatus status, LocalDate start, LocalDate end);
 }

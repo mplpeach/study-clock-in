@@ -85,14 +85,14 @@ public class TaskServiceImpl implements TaskService {
                 task.setScheduledDate(newDate);
                 taskInstanceService.createInstance(task.getUserId(), task.getId(), newDate);
                 if (oldDate != null && !oldDate.equals(newDate)) {
-                    taskInstanceService.deleteTodoInstanceByTaskAndDate(
-                            task.getUserId(), task.getId(), oldDate);
+                    taskInstanceService.deleteInactiveInstancesForTask(
+                            task.getUserId(), task.getId(), newDate);
                 }
             } else {
                 task.setScheduledDate(null);
                 if (oldDate != null) {
-                    taskInstanceService.deleteTodoInstanceByTaskAndDate(
-                            task.getUserId(), task.getId(), oldDate);
+                    taskInstanceService.deleteInactiveInstancesForTask(
+                            task.getUserId(), task.getId(), null);
                 }
             }
         }

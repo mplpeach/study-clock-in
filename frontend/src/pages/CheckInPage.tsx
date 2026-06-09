@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-  Card, Button, Checkbox, Modal, Form, Input, Select, TimePicker, message, Row, Col,
+  Card, Button, Checkbox, Modal, Form, Input, Select, DatePicker, TimePicker, message, Row, Col,
   Tag, Empty, Upload, List, Space, Typography, Divider,
 } from 'antd';
 import {
@@ -71,6 +71,7 @@ const CheckInPage: React.FC = () => {
 
   const [reorderModalOpen, setReorderModalOpen] = useState(false);
   const [sortedGoals, setSortedGoals] = useState<Goal[]>([]);
+  const [rescheduleDate, setRescheduleDate] = useState<dayjs.Dayjs | null>(null);
   const [switchModalOpen, setSwitchModalOpen] = useState(false);
   const [pendingTaskId, setPendingTaskId] = useState<number | null>(null);
   const [switchForm] = Form.useForm();
@@ -1124,7 +1125,7 @@ const CheckInPage: React.FC = () => {
         className="cute-modal"
         title="📋 任务详情"
         open={detailInstanceId !== null}
-        onCancel={() => setDetailInstanceId(null)}
+        onCancel={() => { setDetailInstanceId(null); setRescheduleDate(null); }}
         footer={null}
         width={480}
       >
@@ -1184,25 +1185,39 @@ const CheckInPage: React.FC = () => {
             {detailInstance.status !== 'COMPLETED' && detailInstance.status !== 'SKIPPED' && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #fef0f3' }}>
                 {detailInstance.repeatRule === 'NONE' ? (
-                  <Button
-                    className="subtle-action"
-                    size="small"
-                    disabled={timer.isActive || (detailInstance.deferCount ?? 0) >= 3}
-                    title={(detailInstance.deferCount ?? 0) >= 3 ? '已达到最大延期次数（3次）' : '延至明天'}
-                    onClick={async () => {
-                      try {
-                        await instanceApi.defer(detailInstance.id);
-                        message.success('已延期至明天');
-                        setDetailInstanceId(null);
-                        fetchData();
-                      } catch (e: any) { message.error(e?.message || '延期失败'); }
-                    }}
-                  >
-                    延期至明天{(detailInstance.deferCount ?? 0) > 0 ? ` (${detailInstance.deferCount}/3)` : ''}
-                  </Button>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                      重新安排到指定日期：
+                    </Text>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <DatePicker
+                        size="small"
+                        style={{ flex: 1 }}
+                        disabledDate={(current) => current && current < dayjs().startOf('day')}
+                        onChange={setRescheduleDate}
+                      />
+                      <Button
+                        className="reschedule-btn"
+                        size="small"
+                        disabled={!rescheduleDate || timer.isActive}
+                      onClick={async () => {
+                          try {
+                            await taskApi.update(detailInstance.taskId, {
+                              scheduledDate: rescheduleDate!.format('YYYY-MM-DD'),
+                            });
+                            message.success(`已重新安排至 ${rescheduleDate!.format('M月D日')}`);
+                            setDetailInstanceId(null);
+                            setRescheduleDate(null);
+                            fetchData();
+                          } catch (e: any) { message.error(e?.message || '安排失败'); }
+                        }}>
+                        确定
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <Button
-                    className="subtle-action"
+                    className="reschedule-btn"
                     size="small"
                     disabled={timer.isActive}
                     onClick={async () => {

@@ -439,6 +439,20 @@ input, textarea {
   opacity: 1;
 }
 
+.reschedule-btn {
+  border: 1px solid #e8ccd4 !important;
+  color: #c49ba5 !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  border-radius: 12px !important;
+  transition: all 0.25s ease;
+}
+.reschedule-btn:hover {
+  border-color: #ff6b81 !important;
+  color: #ff6b81 !important;
+  box-shadow: 0 0 10px rgba(255, 107, 129, 0.25) !important;
+}
+
 /* ============ 工具面板 ============ */
 .tool-panel {
   border-radius: 16px !important;
