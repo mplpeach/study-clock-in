@@ -5,6 +5,7 @@ import com.example.clockin.entity.GoalTask;
 import com.example.clockin.entity.Task;
 import com.example.clockin.enums.RepeatRule;
 import com.example.clockin.enums.TaskStatus;
+import com.example.clockin.util.DateUtil;
 import com.example.clockin.repository.GoalTaskRepository;
 import com.example.clockin.repository.TaskRepository;
 import com.example.clockin.service.TaskInstanceService;
@@ -59,7 +60,7 @@ public class TaskServiceImpl implements TaskService {
 
         // 重复规则：若今天匹配，立刻创建实例
         if (matchesToday(task)) {
-            taskInstanceService.createInstance(userId, task.getId(), LocalDate.now());
+            taskInstanceService.createInstance(userId, task.getId(), DateUtil.getEffectiveToday());
         }
 
         return toDTO(task);
@@ -100,7 +101,7 @@ public class TaskServiceImpl implements TaskService {
 
         // 重复规则：若今天匹配，立刻创建实例
         if (matchesToday(task)) {
-            taskInstanceService.createInstance(task.getUserId(), task.getId(), LocalDate.now());
+            taskInstanceService.createInstance(task.getUserId(), task.getId(), DateUtil.getEffectiveToday());
         }
 
         return toDTO(task);
@@ -170,7 +171,7 @@ public class TaskServiceImpl implements TaskService {
         if (rule == RepeatRule.WEEKLY) {
             String weeklyDays = task.getWeeklyDays();
             if (weeklyDays == null || weeklyDays.isBlank()) return false;
-            int todayValue = LocalDate.now().getDayOfWeek().getValue();
+            int todayValue = DateUtil.getEffectiveToday().getDayOfWeek().getValue();
             Set<Integer> configuredDays = Arrays.stream(weeklyDays.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())

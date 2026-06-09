@@ -11,6 +11,7 @@ import {
 import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
 import { instanceApi, checkInApi, taskApi, goalApi } from '../api';
+import { getEffectiveTodayStr, getEffectiveToday } from '../utils/date';
 import { useTimer } from '../contexts/TimerContext';
 import type { TaskInstance, Task, Goal } from '../api';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -82,7 +83,7 @@ const CheckInPage: React.FC = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const today = dayjs().format('YYYY-MM-DD');
+  const today = getEffectiveTodayStr();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchData = async () => {
@@ -1193,7 +1194,7 @@ const CheckInPage: React.FC = () => {
                       <DatePicker
                         size="small"
                         style={{ flex: 1 }}
-                        disabledDate={(current) => current && current < dayjs().startOf('day')}
+                        disabledDate={(current) => current && current < getEffectiveToday().startOf('day')}
                         onChange={setRescheduleDate}
                       />
                       <Button

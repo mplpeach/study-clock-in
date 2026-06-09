@@ -6,6 +6,7 @@ import com.example.clockin.enums.ActionType;
 import com.example.clockin.enums.TaskInstanceStatus;
 import com.example.clockin.repository.*;
 import com.example.clockin.service.TaskInstanceService;
+import com.example.clockin.util.DateUtil;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -92,7 +93,7 @@ public class TaskInstanceServiceImpl implements TaskInstanceService {
 
     @Override
     public List<TaskInstanceDTO> getOverdueInstances(Long userId) {
-        return instanceRepository.findOverdueInstances(userId, LocalDate.now()).stream()
+        return instanceRepository.findOverdueInstances(userId, DateUtil.getEffectiveToday()).stream()
                 .map(this::toDTO).collect(Collectors.toList());
     }
 

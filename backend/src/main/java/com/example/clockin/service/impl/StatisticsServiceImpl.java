@@ -7,6 +7,7 @@ import com.example.clockin.entity.TaskInstance;
 import com.example.clockin.enums.TaskInstanceStatus;
 import com.example.clockin.repository.*;
 import com.example.clockin.service.StatisticsService;
+import com.example.clockin.util.DateUtil;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -61,7 +62,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         stats.setGoalStats(getGoalStats(userId));
 
         // 本周完成任务
-        LocalDate today = LocalDate.now();
+        LocalDate today = DateUtil.getEffectiveToday();
         java.time.DayOfWeek dayOfWeek = today.getDayOfWeek();
         int offset = (dayOfWeek == java.time.DayOfWeek.SUNDAY) ? 6 : dayOfWeek.getValue() - 1;
         LocalDate monday = today.minusDays(offset);
@@ -98,7 +99,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     private int calculateCurrentStreak(List<StatisticsDTO.DailyStats> dailyStats) {
         if (dailyStats.isEmpty()) return 0;
         int streak = 0;
-        LocalDate today = LocalDate.now();
+        LocalDate today = DateUtil.getEffectiveToday();
         Set<String> dateSet = dailyStats.stream()
                 .map(StatisticsDTO.DailyStats::getDate)
                 .collect(Collectors.toSet());

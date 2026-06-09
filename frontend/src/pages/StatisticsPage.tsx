@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Spin, Empty } from 'antd';
 import ReactEChartsCore from 'echarts-for-react';
 import dayjs from 'dayjs';
+import { getEffectiveToday } from '../utils/date';
 import { statisticsApi } from '../api';
 import type { Statistics } from '../api';
 
@@ -40,7 +41,7 @@ const StatisticsPage: React.FC = () => {
   };
 
   // 本周概览
-  const today = dayjs();
+  const today = getEffectiveToday();
   const monday = today.startOf('week').add(1, 'day'); // dayjs startOf('week') = Sunday
   const sunday = monday.add(6, 'day');
   const weekStats = (() => {

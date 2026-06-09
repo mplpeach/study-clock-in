@@ -5,8 +5,11 @@ import com.example.clockin.enums.RepeatRule;
 import com.example.clockin.enums.TaskStatus;
 import com.example.clockin.repository.TaskRepository;
 import com.example.clockin.service.TaskInstanceService;
+import com.example.clockin.util.DateUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -30,9 +33,9 @@ public class TaskInstanceScheduler {
         this.taskInstanceService = taskInstanceService;
     }
 
-    @Scheduled(cron = "0 5 0 * * ?")
+    @Scheduled(cron = "0 5 4 * * ?")
     public void autoCreateTodayInstances() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = DateUtil.getEffectiveToday();
         log.info("开始自动创建 {} 的任务实例", today);
 
         List<Task> tasks = taskRepository.findByRepeatRuleNotAndStatus(RepeatRule.NONE, TaskStatus.ACTIVE);
@@ -68,5 +71,11 @@ public class TaskInstanceScheduler {
             return configuredDays.contains(todayValue);
         }
         return false;
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void onStartup() {
+        log.info("服务启动，兜底创建今日实例");
+        autoCreateTodayInstances();
     }
 }

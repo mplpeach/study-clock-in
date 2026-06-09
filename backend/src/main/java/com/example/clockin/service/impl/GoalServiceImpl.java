@@ -12,6 +12,7 @@ import com.example.clockin.enums.TaskInstanceStatus;
 import com.example.clockin.enums.TaskStatus;
 import com.example.clockin.repository.*;
 import com.example.clockin.service.GoalService;
+import com.example.clockin.util.DateUtil;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -165,7 +166,7 @@ public class GoalServiceImpl implements GoalService {
         dto.setRecurringTaskCount(recurringTasks.size());
 
         if (!recurringTasks.isEmpty()) {
-            LocalDate today = LocalDate.now();
+            LocalDate today = DateUtil.getEffectiveToday();
             LocalDate weekStart = today.with(DayOfWeek.MONDAY);
             LocalDate weekEnd = weekStart.plusDays(6);
 

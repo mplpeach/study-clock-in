@@ -7,6 +7,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, UndoOutlined, StopOutlined,
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import dayjs from 'dayjs';
+import { getEffectiveTodayStr, getEffectiveToday } from '../utils/date';
 import { taskApi, goalApi, instanceApi, checkInApi } from '../api';
 import type { Task, Goal, TaskInstance } from '../api';
 import SortableGoalItem from '../components/SortableGoalItem';
@@ -67,7 +68,7 @@ const TasksPage: React.FC = () => {
     setGoals(data);
   };
 
-  const today = dayjs().format('YYYY-MM-DD');
+  const today = getEffectiveTodayStr();
 
   useEffect(() => {
     fetchTasks();
@@ -553,7 +554,7 @@ const TasksPage: React.FC = () => {
           {repeatRule === 'NONE' && (
             <Form.Item name="scheduledDate" label="安排日期（选填）">
               <DatePicker className="cute-input" style={{ width: '100%' }} placeholder="选择具体日期"
-                disabledDate={(current) => current && current < dayjs().startOf('day')} />
+                disabledDate={(current) => current && current < getEffectiveToday().startOf('day')} />
             </Form.Item>
           )}
           {repeatRule === 'WEEKLY' && (
