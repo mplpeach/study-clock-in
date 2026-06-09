@@ -79,7 +79,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         return recordRepository.findAll().stream()
                 .filter(r -> r.getUserId().equals(userId) && r.getStartTime() != null)
                 .collect(Collectors.groupingBy(
-                        r -> r.getStartTime().toLocalDate(),
+                        r -> DateUtil.getEffectiveDate(r.getStartTime()),
                         LinkedHashMap::new,
                         Collectors.collectingAndThen(
                                 Collectors.toList(),

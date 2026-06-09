@@ -170,8 +170,8 @@ public class CheckInServiceImpl implements CheckInService {
 
     @Override
     public List<TimelineEntryDTO> getTimelineEntries(Long userId, LocalDate date) {
-        LocalDateTime startOfDay = date.atStartOfDay();
-        LocalDateTime startOfNextDay = date.plusDays(1).atStartOfDay();
+        LocalDateTime startOfDay = date.atTime(4, 0);
+        LocalDateTime startOfNextDay = date.plusDays(1).atTime(4, 0);
 
         List<CheckInRecord> records = recordRepository.findByUserIdAndDate(userId, startOfDay, startOfNextDay);
         if (records.isEmpty()) return Collections.emptyList();

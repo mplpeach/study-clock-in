@@ -13,4 +13,8 @@ public class DateUtil {
         LocalDateTime now = LocalDateTime.now();
         return now.getHour() < 4 ? now.toLocalDate().minusDays(1) : now.toLocalDate();
     }
+
+    public static LocalDate getEffectiveDate(LocalDateTime dateTime) {
+        return dateTime.getHour() < 4 ? dateTime.toLocalDate().minusDays(1) : dateTime.toLocalDate();
+    }
 }
