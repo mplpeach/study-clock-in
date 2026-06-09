@@ -51,7 +51,7 @@ const CheckInPage: React.FC = () => {
   const recordStartTimeRef = useRef<number>(0);
 
   const [startModalOpen, setStartModalOpen] = useState(false);
-  const [startTaskType, setStartTaskType] = useState<'existing' | 'new'>('existing');
+  const [startTaskType, setStartTaskType] = useState<'existing' | 'new'>('new');
   const [startForm] = Form.useForm();
 
   const [pauseModalOpen, setPauseModalOpen] = useState(false);
@@ -65,7 +65,7 @@ const CheckInPage: React.FC = () => {
   const [detailInstanceId, setDetailInstanceId] = useState<number | null>(null);
   const [expandedCompleted, setExpandedCompleted] = useState<Set<string>>(new Set());
   const [manualModalOpen, setManualModalOpen] = useState(false);
-  const [manualTaskType, setManualTaskType] = useState<'existing' | 'new'>('existing');
+  const [manualTaskType, setManualTaskType] = useState<'existing' | 'new'>('new');
   const [manualForm] = Form.useForm();
   const [manualFiles, setManualFiles] = useState<File[]>([]);
 
@@ -284,7 +284,7 @@ const CheckInPage: React.FC = () => {
   };
 
   const openStartModal = () => {
-    setStartTaskType('existing');
+    setStartTaskType('new');
     startForm.resetFields();
     setStartModalOpen(true);
   };
@@ -523,7 +523,7 @@ const CheckInPage: React.FC = () => {
   };
 
   const openManualModal = () => {
-    setManualTaskType('existing');
+    setManualTaskType('new');
     manualForm.resetFields();
     setManualFiles([]);
     setManualModalOpen(true);
@@ -572,8 +572,8 @@ const CheckInPage: React.FC = () => {
           value={taskType}
           onChange={(value) => onTypeChange(value as 'existing' | 'new')}
           options={[
-            { label: '已有任务', value: 'existing' },
             { label: '新建任务', value: 'new' },
+            { label: '已有任务', value: 'existing' },
           ]}
         />
       </Form.Item>
